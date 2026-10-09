@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+build/
+dist/
+output/
+*.spec
+ets2cm_backups/
+dump2.txt
+*.sii
+.vscode/
+.idea/
+build_exe.bat
