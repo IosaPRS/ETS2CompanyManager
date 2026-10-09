@@ -10,7 +10,7 @@ upgrade garages and level up driver skills in the save.
 
 - **Drivers**: city, home garage, XP, skills, truck, trailer, status, current route, profit and €/day.
   Statuses use the in-game colours: on a job, empty run, parked, idle, broken, no truck.
-- **Trucks and trailers**: odometer, fuel, wear per part, permanent wear (a driver refuses to drive from 30%), status.
+- **Trucks and trailers**: odometer, fuel, wear per part, permanent wear, status.
 - **Garages**: type, slots, drivers, trailers, income per day and productivity.
 - **Jobs**: who is hauling what, from where to where, distance, time on the road, ferry cost.
 - **Skills tab**: pick what to level up for every driver, like in the game (long distance, high value cargo,
@@ -27,11 +27,11 @@ upgrade garages and level up driver skills in the save.
 **From source** (Python 3.10+):
 
 ```
-pip install PySide6 cryptography pillow
+pip install PySide6 cryptography
 python ets2_gui.py
 ```
 
-`cryptography` is needed to read encrypted saves, `pillow` only for `tools/convert_assets.py`.
+`cryptography` is needed to read encrypted saves.
 A command-line summary is also available: `python ets2_manager.py "<path to game.sii>"`.
 
 ## Editing the save safely
