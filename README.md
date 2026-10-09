@@ -49,12 +49,6 @@ A command-line summary is also available: `python ets2_manager.py "<path to game
 To add a language, copy `en.json`, translate the values, set `"_name"` and drop it in the folder; it shows up in the menu.
 See `locales/README.md`.
 
-## Building the .exe
-
-`build_exe.bat` does it with PyInstaller (`pip install pyinstaller` first). With auto-py-to-exe add the folders
-`assets` → `assets`, `locales` → `locales`, the file `requirements/driver_names.json` → `requirements`,
-hidden import `cryptography`, icon `assets/ui/app_icon.ico`.
-
 ## Known limits
 
 - The skill limit on the Skills tab is set by hand (maximum 36): the program has no XP-to-level table yet.
