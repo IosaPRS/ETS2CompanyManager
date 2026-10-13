@@ -16,7 +16,7 @@ upgrade garages and level up driver skills in the save.
 - **Skills tab**: pick what to level up for every driver, like in the game (long distance, high value cargo,
   fragile cargo, just-in-time, ecodriving and the six ADR classes).
 - **Save editing**: repair (all or selected), refuel, change plates, upgrade a small garage to a large one, raise skills,
-  change the company balance and player level (the wrench on the *Money* tile, a double-click on it, or *Edit → Balance and level*).
+  change the company balance and player level (the wrench or a double-click on the *Money* and *Level* tiles).
 - **Profiles**: pick any profile and save slot (*File → Choose profile and save*), including Steam Cloud profiles.
 - Update check at startup (can be turned off in *Settings*), interface scale, the window reopens where you left it.
 - Dark and light theme, English / Russian / German / French interface, sorting and filtering in every table.

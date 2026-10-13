@@ -969,10 +969,6 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
 
-        emenu = self.menuBar().addMenu(tr("Правка"))
-        self._action(emenu, tr("Баланс…"), self.edit_money)
-        self._action(emenu, tr("Уровень…"), self.edit_level)
-
         lmenu = self.menuBar().addMenu("Язык / Language")
         for code, name in available_langs().items():
             act = self._action(lmenu, name, lambda c=code: self.switch_language(c), checkable=True)
