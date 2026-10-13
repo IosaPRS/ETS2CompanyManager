@@ -107,7 +107,6 @@
  "<b>Сейчас без заказа</b>": "<b>Aucun trajet pour l'instant</b>",
  "<b>Заказов в истории:</b> {n}, км по заказам {kj}, порожняком {kf}": "<b>Trajets dans l'historique :</b> {n}, km en trajet {kj}, km à vide {kf}",
  "<b>Выручка</b> {rev}, зарплата {wage}, топливо {fuel}, обслуживание {maint}, <b>прибыль {net}</b>": "<b>Revenu</b> {rev}, salaire {wage}, carburant {fuel}, entretien {maint}, <b>bénéfice {net}</b>",
- "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Это не уровень игрока, уровень зависит от опыта.": "Somme des points de compétence du conducteur (ADR compté par nombre de classes). Maximum 36 : 6 compétences × 6. Ce n'est pas le niveau du joueur ; il dépend de l'expérience.",
  "Починить трак": "Réparer le camion",
  "Чинит трак выбранного водителя": "Répare le camion du conducteur sélectionné",
  "Заправить трак": "Faire le plein",
@@ -171,10 +170,8 @@
  "Применить к сейву…": "Appliquer à la sauvegarde…",
  "Сбросить выбор": "Réinitialiser la sélection",
  "Предел суммы навыков:": "Limite de la somme des compétences :",
- "Предел суммы навыков (Σ). В игре очков столько же, сколько уровней у водителя, но таблицы опыта в программе пока нет, поэтому предел задаётся вручную. Максимум 36 (6 навыков по 6).": "Limite de la somme des compétences (Σ). Dans le jeu, un conducteur a autant de points que de niveaux, mais le programme n'a pas encore de table d'XP : la limite se règle à la main. Maximum 36 (6 compétences × 6).",
  "Σ навыков {n}/36": "Σ compét. {n}/36",
  "Нет водителей": "Aucun conducteur",
- "опыт {xp}": "XP {xp}",
  "Свободно очков: ": "Points libres : ",
  "· Σ {a} из {b}": "· Σ {a} sur {b}",
  "<b>ADR: опасные грузы</b> · классов {n} из 6": "<b>ADR : marchandises dangereuses</b> · classes {n} sur 6",
@@ -292,5 +289,10 @@
  "Выбор уровня ставит опыт ровно на начало этого уровня.": "Choisir un niveau règle l'expérience exactement au début de ce niveau.",
  "Уровень игрока:": "Niveau du joueur :",
  "Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков программа не начисляет.": "Actuellement : {money} € et {xp} XP (niveau {lvl}). Le jeu calcule le niveau à partir de l'expérience ; le programme n'ajoute pas de points de compétence.",
- "уровень {a} -> {b}": "niveau {a} -> {b}"
+ "уровень {a} -> {b}": "niveau {a} -> {b}",
+ "Ур.": "Niv.",
+ "<b>Уровень {lvl}:</b> {have} / {need} XP": "<b>Niveau {lvl} :</b> {have} / {need} XP",
+ "Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), поэтому предел ставится по уровню водителя. Можно изменить вручную.": "Limite de la somme des compétences (Σ). Il y a autant de points que de niveaux (36 max.), la limite suit donc le niveau du chauffeur. Vous pouvez la modifier à la main.",
+ "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Обычно равна уровню: одно очко за уровень.": "Total des points de compétence du chauffeur (l'ADR compte par nombre de classes). 36 max. : 6 compétences × 6. En général égal au niveau : un point par niveau.",
+ "Уровень по опыту, как в игре. У нанятых водителей порог каждого уровня вдвое выше, чем у игрока.": "Niveau d'après l'expérience, comme dans le jeu. Pour les chauffeurs embauchés, chaque niveau demande deux fois plus d'expérience que pour le joueur."
 }

@@ -26,7 +26,7 @@ from pathlib import Path
 
 from requirements.ets2_i18n import tr
 from requirements.paths import data_path
-from requirements import ets2_names, sii_decode
+from requirements import ets2_names, levels, sii_decode
 
 DECRYPTOR = None  # например r"C:\Tools\SII_Decrypt.exe"
 
@@ -440,6 +440,7 @@ def build_company(sv: Save) -> dict:
             "state": d.get("state"),
             "status": "в рейсе" if job else ("без трака" if truck is None else "свободен"),
             "xp": to_int(src.get("experience_points")),
+            "level": levels.driver_level(to_int(src.get("experience_points")), is_player),
             "skills": skills,
             "skill_unit": eco.get("_name") if is_player else did,  # юнит, где лежат навыки (игрок: economy)
             "adr_classes": adr_classes,

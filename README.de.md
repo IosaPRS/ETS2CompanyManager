@@ -54,13 +54,12 @@ Details in `locales/README.md`.
 
 ## Bekannte Grenzen
 
-- Das Fähigkeitslimit im Reiter „Fähigkeiten“ wird von Hand gesetzt (maximal 36): Es gibt noch keine Tabelle von Erfahrung zu Level.
+- Stufen werden aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); angestellte Fahrer brauchen pro Stufe doppelt so viel Erfahrung wie der Spieler. An einem Spielstand mit dem Spiel abgeglichen (Spieler 368.497 XP = Stufe 69; bei zwei Fahrern stimmte auch der Erfahrungsbalken). Das Fähigkeitslimit im Reiter „Fähigkeiten“ folgt der Stufe des Fahrers (maximal 36) und lässt sich von Hand ändern.
 - ADR-Klassen sind den Bits aufsteigend zugeordnet (1, 2, 3, 4, 6, 8); prüfe eine Änderung im Spiel, bevor du dich darauf verlässt.
 - „Leerfahrt“ wird aus einem Auftrag mit null Frachteinheiten geschätzt.
 - Die Garagenproduktivität wird aus dem Gewinn der letzten 7 Tage und dem Garagenpreis berechnet
   (150.000 € klein, 300.000 € groß); sie stimmte mit den Werten im Spiel überein.
 - Die Erweiterungskosten gibst du selbst ein: den Preis, den das Spiel anzeigt.
-- Die Spielerstufe wird aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); an einem Spielstand stimmte sie mit dem Spiel überein (368.497 XP = Stufe 69).
 - Spielstände von American Truck Simulator lassen sich ebenfalls öffnen, aber Lkw-Namen, Logos und Fahrernamen sind für ETS2 gemacht.
 - Fahrernamen stammen aus der Tabelle `requirements/driver_names.json` (der Spielstand enthält keine); jeden Fahrer kannst du umbenennen.
 

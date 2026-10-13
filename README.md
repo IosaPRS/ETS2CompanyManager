@@ -54,13 +54,12 @@ See `locales/README.md`.
 
 ## Known limits
 
-- The skill limit on the Skills tab is set by hand (maximum 36): the program has no XP-to-level table yet.
+- Levels are calculated from XP with the in-game table (levels 0–50, then +6,800 XP per level); hired drivers need twice the player's XP per level. Checked against the game on one save (player 368,497 XP = level 69; two drivers matched including the XP bar). The skill limit on the Skills tab follows the driver's level (maximum 36) and can be changed by hand.
 - ADR classes are mapped to bits in ascending order (1, 2, 3, 4, 6, 8); check one change in the game before relying on it.
 - "Empty run" is guessed from a job with zero cargo units.
 - Garage productivity is calculated from the last 7 days of garage profit and the garage price
   (€150,000 small, €300,000 large); it matched the values seen in the game.
 - The upgrade cost is entered by hand: type the price the game shows.
-- The player level is calculated from XP with the in-game table (levels 0–50, then +6,800 XP per level); it matched the level shown in the game on one save (368,497 XP = level 69).
 - American Truck Simulator saves open too, but truck names, logos and driver names are made for ETS2.
 - Driver names come from a table in `requirements/driver_names.json` (the save has none); you can rename any driver.
 

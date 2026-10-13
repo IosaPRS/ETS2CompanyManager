@@ -5,11 +5,12 @@ import re
 from pathlib import Path
 
 import ets2_manager as core
+from requirements.levels import level_progress
 from requirements.ets2_i18n import tr
 
 GREEN, RED, AMBER = (76, 175, 80), (229, 57, 53), (255, 179, 0)
 
-DRIVER_HEADERS = ["Водитель", "Город", "Гараж", "XP", "ADR", "Дальн.", "Тяжёл.", "Хрупк.", "Срочн.",
+DRIVER_HEADERS = ["Водитель", "Город", "Гараж", "XP", "Ур.", "ADR", "Дальн.", "Тяжёл.", "Хрупк.", "Срочн.",
                   "Эко", "Σ навыков", "Трак", "Прицеп", "Статус", "Маршрут", "Прибыль", "€/день"]
 TRUCK_HEADERS = ["Модель", "Номер", "Водитель", "Пробег км", "Топливо %", "Двигатель",
                  "Трансм.", "Кабина", "Шасси", "Колёса", "Макс.", "Постоянный", "Статус"]
@@ -156,6 +157,7 @@ def driver_rows(c):
         cells = [
             name, cell(d["city"]), cell(d["garage"] or "-"),
             num_cell(d["xp"]),
+            c_num(d["level"]),
             c_num(d["adr_classes"], skill_tint(d["adr_classes"])),
         ]
         cells += [c_num(s[k], skill_tint(s[k])) for k in ("long_dist", "heavy", "fragile", "urgent", "mechanical")]
@@ -264,34 +266,6 @@ def job_rows(c):
     return rows
 
 
-# ---------- уровень игрока ----------
-
-# Опыт для уровней 0..50 (таблица из игры). Проверено на реальном сейве: 368 497 XP = 69 уровень в игре.
-LEVEL_XP = (0, 200, 700, 1400, 2300, 3300, 4400, 5700, 7300, 9000,
-            11100, 13400, 16000, 18700, 21600, 24600, 27700, 31100, 34800, 38800,
-            43100, 47700, 52400, 57300, 62500, 68200, 74100, 80200, 86300, 92900,
-            99700, 106500, 113300, 120100, 126900, 133700, 140500, 147300, 154100, 160900,
-            167700, 174500, 181300, 188100, 194900, 201700, 208500, 215300, 222100, 228900,
-            235700)
-LEVEL_STEP = 6800  # после 30-го уровня каждый следующий +6 800 XP; выше 50-го шаг продолжен по той же формуле
-
-
-def xp_for_level(level: int) -> int:
-    """Сколько опыта нужно, чтобы получить уровень level."""
-    level = max(0, int(level))
-    if level < len(LEVEL_XP):
-        return LEVEL_XP[level]
-    return LEVEL_XP[-1] + (level - len(LEVEL_XP) + 1) * LEVEL_STEP
-
-
-def level_for_xp(xp: int) -> int:
-    """Уровень игрока по опыту (как в игре)."""
-    xp = max(0, int(xp))
-    if xp < LEVEL_XP[-1]:
-        return max(i for i, need in enumerate(LEVEL_XP) if need <= xp)
-    return len(LEVEL_XP) - 1 + (xp - LEVEL_XP[-1]) // LEVEL_STEP
-
-
 # ---------- тексты ----------
 
 def safe_money(v):
@@ -301,6 +275,12 @@ def safe_money(v):
         return str(v)
 
 
+def level_text(d):
+    """'Уровень 7: 2 666 / 3 200 XP' — как полоска уровня в игре."""
+    lvl, have, need = level_progress(d["xp"], d["is_player"])
+    return tr("<b>Уровень {lvl}:</b> {have} / {need} XP", lvl=lvl, have=core.money(have), need=core.money(need))
+
+
 def driver_card_html(d):
     e = html.escape
     s, st, t, trl, j = d["skills"], d["stats"], d["truck"], d["trailer"], d["job"]
@@ -308,6 +288,7 @@ def driver_card_html(d):
         f"<h3>{e(d['name'])} <small>({e(d['id'])})</small></h3>",
         tr("<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage} &nbsp; <b>XP:</b> {xp}",
            home=e(d['hometown']), city=e(d['city']), garage=e(d['garage'] or '-'), xp=core.money(d['xp'])),
+        level_text(d),
         tr("<b>Навыки:</b> ADR {adr}/6, дальние {ld}, тяжёлые {hv}, хрупкие {fr}, срочные {ur}, эко {me}",
            adr=d['adr_classes'], ld=s['long_dist'], hv=s['heavy'], fr=s['fragile'], ur=s['urgent'], me=s['mechanical']),
     ]

@@ -107,7 +107,6 @@
  "<b>Сейчас без заказа</b>": "<b>Aktuell kein Auftrag</b>",
  "<b>Заказов в истории:</b> {n}, км по заказам {kj}, порожняком {kf}": "<b>Aufträge im Verlauf:</b> {n}, Auftrags-km {kj}, Leerfahrt-km {kf}",
  "<b>Выручка</b> {rev}, зарплата {wage}, топливо {fuel}, обслуживание {maint}, <b>прибыль {net}</b>": "<b>Umsatz</b> {rev}, Lohn {wage}, Kraftstoff {fuel}, Wartung {maint}, <b>Gewinn {net}</b>",
- "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Это не уровень игрока, уровень зависит от опыта.": "Summe der Fähigkeitspunkte des Fahrers (ADR zählt nach Anzahl der Klassen). Maximum 36: 6 Fähigkeiten × 6. Das ist nicht das Spielerlevel; das Level hängt von der Erfahrung ab.",
  "Починить трак": "Zugmaschine reparieren",
  "Чинит трак выбранного водителя": "Repariert die Zugmaschine des gewählten Fahrers",
  "Заправить трак": "Zugmaschine betanken",
@@ -171,10 +170,8 @@
  "Применить к сейву…": "Auf Spielstand anwenden…",
  "Сбросить выбор": "Auswahl zurücksetzen",
  "Предел суммы навыков:": "Limit der Fähigkeitssumme:",
- "Предел суммы навыков (Σ). В игре очков столько же, сколько уровней у водителя, но таблицы опыта в программе пока нет, поэтому предел задаётся вручную. Максимум 36 (6 навыков по 6).": "Limit der Fähigkeitssumme (Σ). Im Spiel hat ein Fahrer so viele Punkte wie Level, aber das Programm hat noch keine Erfahrungstabelle, daher wird das Limit manuell festgelegt. Maximum 36 (6 Fähigkeiten × 6).",
  "Σ навыков {n}/36": "Σ Fähigk. {n}/36",
  "Нет водителей": "Keine Fahrer",
- "опыт {xp}": "Erfahrung {xp}",
  "Свободно очков: ": "Freie Punkte: ",
  "· Σ {a} из {b}": "· Σ {a} von {b}",
  "<b>ADR: опасные грузы</b> · классов {n} из 6": "<b>ADR: Gefahrgut</b> · Klassen {n} von 6",
@@ -292,5 +289,10 @@
  "Выбор уровня ставит опыт ровно на начало этого уровня.": "Die Wahl einer Stufe setzt die Erfahrung genau auf den Beginn dieser Stufe.",
  "Уровень игрока:": "Spielerstufe:",
  "Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков программа не начисляет.": "Aktuell: {money} € und {xp} XP (Stufe {lvl}). Das Spiel berechnet die Stufe aus der Erfahrung; Fertigkeitspunkte vergibt das Programm nicht.",
- "уровень {a} -> {b}": "Stufe {a} -> {b}"
+ "уровень {a} -> {b}": "Stufe {a} -> {b}",
+ "Ур.": "St.",
+ "<b>Уровень {lvl}:</b> {have} / {need} XP": "<b>Stufe {lvl}:</b> {have} / {need} XP",
+ "Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), поэтому предел ставится по уровню водителя. Можно изменить вручную.": "Grenze der Fertigkeitssumme (Σ). Es gibt so viele Fertigkeitspunkte wie Stufen (max. 36), daher wird die Grenze aus der Stufe des Fahrers gesetzt. Sie kann von Hand geändert werden.",
+ "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Обычно равна уровню: одно очко за уровень.": "Summe der Fertigkeitspunkte des Fahrers (ADR zählt nach Anzahl der Klassen). Max. 36: 6 Fertigkeiten × 6. Meist gleich der Stufe: ein Punkt pro Stufe.",
+ "Уровень по опыту, как в игре. У нанятых водителей порог каждого уровня вдвое выше, чем у игрока.": "Stufe aus der Erfahrung, wie im Spiel. Angestellte Fahrer brauchen für jede Stufe doppelt so viel Erfahrung wie der Spieler."
 }

@@ -30,6 +30,8 @@ import ets2_manager as core
 from requirements import ets2_view as view
 from requirements import updates
 from requirements.app_info import APP_NAME, VERSION
+from requirements import levels
+from requirements.levels import SKILL_POINTS_MAX
 
 ASSETS_ROOT = data_path("assets")
 ASSETS = ASSETS_ROOT / "brands"
@@ -297,10 +299,9 @@ class SkillsPage(QWidget):
         self.points = QLabel()
         self.points.setTextFormat(Qt.TextFormat.RichText)
         self.limit = QSpinBox()
-        self.limit.setRange(0, 36)
-        self.limit.setValue(self.settings.value("skill_limit", 36, type=int))
-        self.limit.setToolTip(tr("Предел суммы навыков (Σ). В игре очков столько же, сколько уровней у водителя, но таблицы "
-                                 "опыта в программе пока нет, поэтому предел задаётся вручную. Максимум 36 (6 навыков по 6)."))
+        self.limit.setRange(0, SKILL_POINTS_MAX)
+        self.limit.setToolTip(tr("Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), "
+                                 "поэтому предел ставится по уровню водителя. Можно изменить вручную."))
         self.limit.valueChanged.connect(self._limit_changed)
         head = QHBoxLayout()
         head.addWidget(self.avatar)
@@ -354,7 +355,8 @@ class SkillsPage(QWidget):
         for d in self.company["drivers"]:
             if q and q not in d["name"].lower() and q not in d["id"].lower():
                 continue
-            item = QListWidgetItem(f"{'★ ' if d['is_player'] else ''}{d['name']}\n" + tr("Σ навыков {n}/36", n=d['skill_sum']))
+            item = QListWidgetItem(f"{'★ ' if d['is_player'] else ''}{d['name']}\n" + tr("ур. {n}", n=d["level"]) + "  ·  "
+                                   + tr("Σ навыков {n}/36", n=d['skill_sum']))
             item.setData(Qt.ItemDataRole.UserRole, d["id"])
             pm = avatar_pixmap(d["id"].rpartition(".")[2], 40)
             if pm:
@@ -378,10 +380,13 @@ class SkillsPage(QWidget):
         self.current_id = did
         self.driver = next((d for d in self.company["drivers"] if d["id"] == did), None) if self.company else None
         self.pending = {}
+        if self.driver:
+            self.limit.blockSignals(True)
+            self.limit.setValue(min(SKILL_POINTS_MAX, self.driver["level"]))
+            self.limit.blockSignals(False)
         self._render()
 
-    def _limit_changed(self, v):
-        self.settings.setValue("skill_limit", v)
+    def _limit_changed(self, _v):
         self._render()
 
     def _reset(self):
@@ -460,7 +465,7 @@ class SkillsPage(QWidget):
             self.avatar.clear()
         st_text, _ = view.driver_status(d)
         self.title.setText(f"<span style='font-size:16pt'><b>{('★ ' if d['is_player'] else '') + d['name']}</b></span><br>"
-                           f"{d['city'] or '-'} · {st_text} · " + tr("опыт {xp}", xp=f"{d['xp']:,}".replace(",", " ")))
+                           f"{d['city'] or '-'} · {st_text}<br>" + view.level_text(d))
         free = self._free()
         self.points.setText(tr("Свободно очков: ") + f"<b style='color:{theme.c('accent') if free else theme.c('muted')}'>{free}</b> "
                             + tr("· Σ {a} из {b}", a=self._sum(), b=self.limit.value()))
@@ -602,7 +607,7 @@ class StatBar(QWidget):
             tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, True))
         tiles += [
             (tr("Штаб"), c["hq"] or "-", False),
-            (tr("Опыт"), core.money(c["xp"]) + "  ·  " + tr("ур. {n}", n=view.level_for_xp(c["xp"])), False),
+            (tr("Опыт"), core.money(c["xp"]) + "  ·  " + tr("ур. {n}", n=levels.level_for_xp(c["xp"])), False),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
             (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
@@ -771,8 +776,8 @@ class BalanceDialog(QDialog):
         # если в сейве значение вне диапазона поля, без правки пользователя оно не должно записаться обрезанным
         self.money0, self.xp0 = self.money.value(), self.xp.value()
         self.level = QSpinBox()
-        self.level.setRange(0, view.level_for_xp(self.xp.maximum()))
-        self.level.setValue(view.level_for_xp(self.xp.value()))
+        self.level.setRange(0, levels.level_for_xp(self.xp.maximum()))
+        self.level.setValue(levels.level_for_xp(self.xp.value()))
         self.level.setToolTip(tr("Выбор уровня ставит опыт ровно на начало этого уровня."))
         self.level.valueChanged.connect(self._level_changed)
         self.xp.valueChanged.connect(self._xp_changed)
@@ -781,7 +786,7 @@ class BalanceDialog(QDialog):
         form.addRow(tr("Опыт игрока (XP):"), self.xp)
         form.addRow(tr("Уровень игрока:"), self.level)
         note = QLabel(tr("Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков "
-                         "программа не начисляет.", money=core.money(money), xp=core.money(xp), lvl=view.level_for_xp(xp)))
+                         "программа не начисляет.", money=core.money(money), xp=core.money(xp), lvl=levels.level_for_xp(xp)))
         note.setWordWrap(True)
         note.setStyleSheet(f"color: {theme.c('muted')};")
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -794,12 +799,12 @@ class BalanceDialog(QDialog):
 
     def _level_changed(self, lvl):
         self.xp.blockSignals(True)
-        self.xp.setValue(view.xp_for_level(lvl))
+        self.xp.setValue(levels.xp_for_level(lvl))
         self.xp.blockSignals(False)
 
     def _xp_changed(self, xp):
         self.level.blockSignals(True)
-        self.level.setValue(view.level_for_xp(xp))
+        self.level.setValue(levels.level_for_xp(xp))
         self.level.blockSignals(False)
 
     def changes(self):
@@ -948,9 +953,13 @@ class MainWindow(QMainWindow):
         self._action(hmenu, tr("О программе"), self.show_about)
         self._build_action_rows()
         self.pages["drivers"].model.setHeaderData(
-            10, Qt.Orientation.Horizontal,
+            view.DRIVER_HEADERS.index("Σ навыков"), Qt.Orientation.Horizontal,
             tr("Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. "
-               "Это не уровень игрока, уровень зависит от опыта."), Qt.ItemDataRole.ToolTipRole)
+               "Обычно равна уровню: одно очко за уровень."), Qt.ItemDataRole.ToolTipRole)
+        self.pages["drivers"].model.setHeaderData(
+            view.DRIVER_HEADERS.index("Ур."), Qt.Orientation.Horizontal,
+            tr("Уровень по опыту, как в игре. У нанятых водителей порог каждого уровня вдвое выше, чем у игрока."),
+            Qt.ItemDataRole.ToolTipRole)
 
         self.timer = QTimer(self)
         self.timer.setInterval(3000)
@@ -1360,7 +1369,7 @@ class MainWindow(QMainWindow):
         if "xp" in ch:
             ops.append(("xp", c["economy_unit"], ch["xp"]))
             parts.append(tr("Опыт: {a} -> {b}", a=core.money(c["xp"]), b=core.money(ch["xp"]))
-                         + " (" + tr("уровень {a} -> {b}", a=view.level_for_xp(c["xp"]), b=view.level_for_xp(ch["xp"])) + ")")
+                         + " (" + tr("уровень {a} -> {b}", a=levels.level_for_xp(c["xp"]), b=levels.level_for_xp(ch["xp"])) + ")")
         if self._confirm_write(tr("Изменить баланс и опыт?") + "\n" + "\n".join(parts)):
             self._run_ops(ops, tr("Баланс и опыт изменены."))
 
