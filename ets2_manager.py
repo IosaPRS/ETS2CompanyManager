@@ -338,6 +338,9 @@ def parse_job(sv: Save, ref, now: int):
     j = sv.ref(ref)
     if not j:
         return None
+    empty = (None, "", "null")
+    if j.get("cargo") in empty and j.get("source_company") in empty and j.get("target_company") in empty:
+        return None  # пустой job_info: у водителя нет заказа (так у только что нанятых и у ждущих в гараже)
     src_co, src_city = company_city(j.get("source_company"))
     dst_co, dst_city = company_city(j.get("target_company"))
     start = to_int(j.get("start_time"))

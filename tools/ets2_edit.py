@@ -224,17 +224,18 @@ def set_int_field(lines, unit_id, key, value: int, lo: int, hi: int, what: str):
 
 # ---------- сверка и запись ----------
 
-def _diff_units(a: "core.Save", b: "core.Save"):
-    """Список (unit, field) с отличиями между двумя разобранными сейвами; структурные отличия -> EditError."""
-    if set(a.units) != set(b.units):
+def _diff_units(a: "core.Save", b: "core.Save", new_units=frozenset(), reshaped=frozenset()):
+    """Список (unit, field) с отличиями между двумя разобранными сейвами; структурные отличия -> EditError.
+    new_units: юниты, которые должны появиться; reshaped: юниты, у которых могут появиться поля (пустой массив стал непустым)."""
+    if set(b.units) != set(a.units) | set(new_units) or set(new_units) & set(a.units):
         raise EditError(tr("Сверка не прошла: набор юнитов в результате отличается от оригинала."))
-    diffs = []
+    diffs = [(n, "*") for n in new_units]
     for name, ua in a.units.items():
         ub = b.units[name]
-        if ua.keys() != ub.keys():
+        if ua.keys() != ub.keys() and not (name in reshaped and ua.keys() <= ub.keys()):
             raise EditError(tr("Сверка не прошла: у юнита {name} изменился набор полей.", name=name))
-        for k, v in ua.items():
-            if v != ub[k]:
+        for k, v in ub.items():
+            if v != ua.get(k):
                 diffs.append((name, k))
     return diffs
 
@@ -275,7 +276,7 @@ def apply_ops(path, ops, expected_mtime=None):
         raise EditError(tr("Сверка не прошла: текстовая версия сейва расходится с исходным файлом, запись отменена."))
 
     lines = text.split("\n")
-    touched, expected = 0, set()
+    touched, expected, new_units, reshaped = 0, set(), set(), set()
     for op in ops:
         if op[0] == "repair":
             n = repair_unit(lines, op[1], full=op[2])
@@ -301,12 +302,19 @@ def apply_ops(path, ops, expected_mtime=None):
             raise_skills(lines, op[1], op[2])
             touched += 1
             expected.add(op[1])
+        elif op[0] == "fill":  # ('fill', план) — найм и покупка в свободные места гаражей
+            from tools import ets2_fill
+            units, created = ets2_fill.apply_fill(lines, original, op[1])
+            touched += 1
+            expected |= units
+            reshaped |= units
+            new_units |= created
         else:
             raise EditError(tr("Неизвестная операция {op}", op=op[0]))
     new_text = "\n".join(lines)
     result = parse_text(new_text)
-    diffs = _diff_units(original, result)
-    stray = [d for d in diffs if d[0] not in expected]
+    diffs = _diff_units(original, result, new_units, reshaped)
+    stray = [d for d in diffs if d[0] not in expected and d[0] not in new_units]
     if stray:
         raise EditError(tr("Сверка не прошла: изменилось лишнее ({what}), запись отменена.", what=stray[0]))
     if not diffs:

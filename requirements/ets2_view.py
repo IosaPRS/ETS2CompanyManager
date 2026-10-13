@@ -141,10 +141,10 @@ def c_num(n, tint=None):
 
 
 def route_text(d):
-    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - прочерк."""
+    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - «Без рейса» (у игрока заказ в сейве не виден - прочерк)."""
     j = d["job"]
     if not j:
-        return "-"
+        return "-" if d.get("is_player") else tr("Без рейса")
     return tr("{src} → {dst} · {cargo} · {km} км", src=j["source"], dst=j["target"], cargo=j["cargo"], km=j["km"])
 
 

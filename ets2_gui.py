@@ -17,12 +17,13 @@ from PySide6.QtCore import QObject, QPointF, QRect, QRectF, QSettings, QSize, QS
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServices, QGuiApplication, QIcon, QPainter,
                            QPalette, QPen, QPixmap, QStandardItem, QStandardItemModel)
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QGraphicsOpacityEffect, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
+    QAbstractItemView, QApplication, QComboBox, QGraphicsOpacityEffect, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
     QLabel, QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QScrollArea, QSizePolicy, QSpinBox, QTableView, QToolButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tools import ets2_edit as edit
+from tools import ets2_fill as fill
 from requirements import ets2_theme as theme
 from requirements.paths import data_path
 from requirements.ets2_i18n import available_langs, get_lang, set_lang, tr
@@ -867,6 +868,200 @@ class ValueDialog(QDialog):
         return self.spin.value() if self.spin.value() != self.start else None
 
 
+class FillDialog(QDialog):
+    """Заполнение гаражей: свободные места, водители из агентства и запаса игры (с фото), образцы грузовика и прицепа."""
+
+    SKILL_COLS = (("long_dist", "Дальн."), ("heavy", "Тяжёл."), ("fragile", "Хрупк."), ("urgent", "Срочн."), ("mechanical", "Эко"))
+
+    def __init__(self, parent, sv):
+        super().__init__(parent)
+        self.setWindowTitle(tr("Заполнить гаражи"))
+        self.resize(980, 760)
+        self.slots = fill.free_slots(sv)
+        self.pool = sorted(fill.pool_drivers(sv), key=lambda d: (-d["xp"], d["name"]))
+        self.trucks = fill.truck_templates(sv)
+        self.trailers = fill.trailer_templates(sv)
+        self.plan = None
+
+        # --- гаражи ---
+        by_garage = {}
+        for s in self.slots:
+            by_garage.setdefault(s["garage"], []).append(s)
+        self.garages = list(by_garage.items())
+        self.gtable = QTableWidget(len(self.garages), 4)
+        self.gtable.setHorizontalHeaderLabels([tr("Гараж"), tr("Свободных мест"), tr("Нужно водителей"), tr("Нужно грузовиков")])
+        self.gtable.verticalHeader().setVisible(False)
+        self.gtable.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        for r, (gid, slots) in enumerate(self.garages):
+            it = QTableWidgetItem(slots[0]["city"])
+            it.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            it.setCheckState(Qt.CheckState.Checked)
+            self.gtable.setItem(r, 0, it)
+            for c, v in enumerate((len(slots), sum(not s["has_driver"] for s in slots),
+                                   sum(not s["has_truck"] for s in slots)), 1):
+                cell = QTableWidgetItem(str(v))
+                cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.gtable.setItem(r, c, cell)
+        self.gtable.resizeColumnsToContents()
+        self.gtable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.gtable.setMaximumHeight(200)
+        self.gtable.itemChanged.connect(lambda *_: self._update())
+
+        # --- водители ---
+        heads = ["", tr("Имя"), tr("Ур."), "ADR"] + [tr(t) for _, t in self.SKILL_COLS] + [tr("Где")]
+        self.dtable = QTableWidget(len(self.pool), len(heads))
+        self.dtable.setHorizontalHeaderLabels(heads)
+        self.dtable.verticalHeader().setVisible(False)
+        self.dtable.verticalHeader().setDefaultSectionSize(44)
+        self.dtable.setIconSize(QSize(40, 40))
+        self.dtable.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.dtable.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        for r, d in enumerate(self.pool):
+            pic = QTableWidgetItem()
+            pm = avatar_pixmap(d["id"].rpartition(".")[2], 40)
+            if pm:
+                pic.setIcon(QIcon(pm))
+            pic.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            pic.setCheckState(Qt.CheckState.Unchecked)
+            self.dtable.setItem(r, 0, pic)
+            vals = [d["name"], d["level"], d["adr_classes"]] + [d["skills"][k] for k, _ in self.SKILL_COLS] + \
+                   [tr("агентство") if d["offered"] else tr("запас")]
+            for c, v in enumerate(vals, 1):
+                cell = QTableWidgetItem(str(v))
+                if c > 1:
+                    cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.dtable.setItem(r, c, cell)
+        self.dtable.resizeColumnsToContents()
+        self.dtable.setColumnWidth(0, 64)
+        self.dtable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.dtable.itemChanged.connect(lambda *_: self._update())
+        best = QPushButton(tr("Выбрать лучших"))
+        best.setToolTip(tr("Отмечает водителей с самым высоким уровнем, сколько нужно для отмеченных гаражей"))
+        best.clicked.connect(self._pick_best)
+        none = QPushButton(tr("Снять выбор"))
+        none.clicked.connect(lambda: self._check_drivers(set()))
+
+        # --- грузовик, прицеп, цены ---
+        self.truck_box = QCheckBox(tr("Ставить грузовик в пустые места"))
+        self.truck_box.setChecked(bool(self.trucks))
+        self.truck_box.setEnabled(bool(self.trucks))
+        self.truck_combo = QComboBox()
+        for t in self.trucks:
+            self.truck_combo.addItem(f"{t['model']} · {t['plate']}", t["unit"])
+        self.trailer_combo = QComboBox()
+        self.trailer_combo.addItem(tr("Без прицепа"), None)
+        for t in self.trailers:
+            self.trailer_combo.addItem(f"{t['kind']} · {t['plate']}", t["unit"])
+        self.hire_price = big_spin(0, 10_000_000, fill.HIRE_FEE)
+        self.truck_price = big_spin(0, 10_000_000, 100_000)
+        self.trailer_price = big_spin(0, 10_000_000, 30_000)
+        self.truck_box.toggled.connect(lambda *_: self._update())
+        for w in (self.truck_combo, self.trailer_combo):
+            w.currentIndexChanged.connect(lambda *_: self._update())
+        for w in (self.hire_price, self.truck_price, self.trailer_price):
+            w.valueChanged.connect(lambda *_: self._update())
+        form = QFormLayout()
+        form.addRow(tr("Найм одного водителя, €:"), self.hire_price)
+        truck_row = QHBoxLayout()
+        truck_row.addWidget(self.truck_combo, 1)
+        truck_row.addWidget(QLabel(tr("цена, €:")))
+        truck_row.addWidget(self.truck_price)
+        form.addRow(self.truck_box, truck_row)
+        trailer_row = QHBoxLayout()
+        trailer_row.addWidget(self.trailer_combo, 1)
+        trailer_row.addWidget(QLabel(tr("цена, €:")))
+        trailer_row.addWidget(self.trailer_price)
+        form.addRow(tr("Прицеп каждому новому водителю:"), trailer_row)
+        hint = QLabel(tr("Грузовик и прицеп — копии выбранных ваших, как новые: пробег 0, износ 0, полный бак, свой номер. "
+                         "Цены по умолчанию примерные, поставьте цены из игры или 0, чтобы не списывать."))
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {theme.c('muted')};")
+        self.summary = QLabel()
+        self.summary.setWordWrap(True)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText(tr("Заполнить"))
+        self.buttons.accepted.connect(self._accept)
+        self.buttons.rejected.connect(self.reject)
+
+        pick_row = QHBoxLayout()
+        pick_row.addWidget(QLabel(tr("Свободные водители (агентство и запас игры). Отметьте, кого нанять:")), 1)
+        pick_row.addWidget(best)
+        pick_row.addWidget(none)
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel(tr("Гаражи со свободными местами:")))
+        lay.addWidget(self.gtable)
+        lay.addLayout(pick_row)
+        lay.addWidget(self.dtable, 1)
+        lay.addLayout(form)
+        lay.addWidget(hint)
+        lay.addWidget(self.summary)
+        lay.addWidget(self.buttons)
+        self._pick_best()
+
+    # --- выбор ---
+    def _chosen_garages(self):
+        return [slots for r, (_, slots) in enumerate(self.garages)
+                if self.gtable.item(r, 0).checkState() == Qt.CheckState.Checked]
+
+    def _need_drivers(self):
+        return sum(not s["has_driver"] for slots in self._chosen_garages() for s in slots)
+
+    def _chosen_drivers(self):
+        return [d["id"] for r, d in enumerate(self.pool)
+                if self.dtable.item(r, 0).checkState() == Qt.CheckState.Checked]
+
+    def _check_drivers(self, ids):
+        self.dtable.blockSignals(True)
+        for r, d in enumerate(self.pool):
+            self.dtable.item(r, 0).setCheckState(Qt.CheckState.Checked if d["id"] in ids else Qt.CheckState.Unchecked)
+        self.dtable.blockSignals(False)
+        self._update()
+
+    def _pick_best(self):
+        self._check_drivers({d["id"] for d in self.pool[:self._need_drivers()]})
+
+    def build_plan(self):
+        drivers = self._chosen_drivers()
+        trucks = self.truck_box.isChecked() and self.truck_combo.currentData() is not None
+        trailer = self.trailer_combo.currentData()
+        plan_slots = []
+        for slots in self._chosen_garages():
+            for s in slots:
+                new_driver = None
+                if not s["has_driver"]:
+                    if not drivers:
+                        continue
+                    new_driver = drivers.pop(0)
+                plan_slots.append({"garage": s["garage"], "slot": s["slot"], "driver": new_driver,
+                                   "truck": trucks and not s["has_truck"], "trailer": bool(trailer and new_driver)})
+        plan_slots = [s for s in plan_slots if s["driver"] or s["truck"]]
+        n_drv = sum(1 for s in plan_slots if s["driver"])
+        n_trk = sum(1 for s in plan_slots if s["truck"])
+        n_trl = sum(1 for s in plan_slots if s["trailer"])
+        cost = n_drv * self.hire_price.value() + n_trk * self.truck_price.value() + n_trl * self.trailer_price.value()
+        return {"slots": plan_slots, "truck_template": self.truck_combo.currentData() if trucks else None,
+                "trailer_template": trailer, "cost": cost}, (n_drv, n_trk, n_trl, len(drivers))
+
+    def _update(self):
+        plan, (n_drv, n_trk, n_trl, extra) = self.build_plan()
+        text = tr("Будет нанято водителей: {d}, грузовиков: {t}, прицепов: {p}. Всего к списанию: {cost} €.",
+                  d=n_drv, t=n_trk, p=n_trl, cost=core.money(plan["cost"]))
+        if extra:
+            text += " " + tr("Отмечено лишних водителей: {n}, для них нет свободных мест.", n=extra)
+        if not self.trucks:
+            text += " " + tr("Своих грузовиков нет, копировать нечего: будут только водители.")
+        self.summary.setText(text)
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(bool(plan["slots"]))
+
+    def _accept(self):
+        self.plan, _ = self.build_plan()
+        self.accept()
+
+    def counts(self):
+        return self.build_plan()[1]
+
+
 class UpdateChecker(QObject):
     """Проверка обновлений в фоновом потоке (daemon), чтобы окно не подвисало без сети и не ждало её при выходе."""
     done = Signal(bool, dict, str)  # есть новее, данные релиза, ошибка
@@ -1156,6 +1351,8 @@ class MainWindow(QMainWindow):
         self._btn("trailers", tr("Сменить номер…"), self.change_plate)
         self._btn("garages", tr("Улучшить до большого…"), self.upgrade_selected_garage,
                   tr("Малый гараж (3 места) -> большой (5 мест)"))
+        self._btn("garages", tr("Заполнить гаражи…"), self.fill_garages,
+                  tr("Нанять водителей в свободные места и поставить им грузовики и прицепы"))
 
     def _sync_full_repair(self, on):
         for box in self.full_repair_boxes:
@@ -1380,6 +1577,25 @@ class MainWindow(QMainWindow):
             150000, 0, 1000000000, 1000)
         if ok and self._confirm_write(tr("Улучшить гараж {city} до большого за {cost} €?", city=g['city'], cost=f"{cost:,}".replace(",", " "))):
             self._run_ops([("upgrade", gid, self.company["bank_unit"], cost)], tr("Гараж {city} улучшен до большого.", city=g['city']))
+
+    def fill_garages(self):
+        if not self._need_save():
+            return
+        try:
+            sv = core.Save(self.save_path)
+        except (OSError, SystemExit) as exc:
+            QMessageBox.warning(self, tr("Сейв не прочитан"), str(exc))
+            return
+        if not fill.free_slots(sv):
+            QMessageBox.information(self, tr("Свободных мест нет"), tr("Во всех ваших гаражах уже есть водители и грузовики."))
+            return
+        dlg = FillDialog(self, sv)
+        if not dlg.exec() or not dlg.plan:
+            return
+        n_drv, n_trk, n_trl, _ = dlg.counts()
+        if self._confirm_write(tr("Нанять водителей: {d}, поставить грузовиков: {t}, прицепов: {p}. Списать {cost} €?",
+                                  d=n_drv, t=n_trk, p=n_trl, cost=core.money(dlg.plan["cost"]))):
+            self._run_ops([("fill", dlg.plan)], tr("Гаражи заполнены."))
 
     def apply_skills(self, did, changes, new_level=-1):
         if not self._need_save():
