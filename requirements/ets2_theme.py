@@ -79,7 +79,7 @@ QFrame#tile {{ background: {p['panel']}; border: 1px solid {p['border']}; border
 QLabel#tileLabel {{ color: {p['muted']}; font-size: 8pt; }}
 QLabel#tileValue {{ color: {p['text']}; font-size: 14pt; font-weight: 700; }}
 QLabel#tileValue[accent="true"] {{ color: {p['accent']}; }}
-QToolButton#tileEdit {{ background: transparent; border: none; padding: 0 2px; font-size: 10pt; }}
+QToolButton#tileEdit {{ background: transparent; border: none; padding: 0; }}
 QToolButton#tileEdit:hover {{ background: {p['raised']}; border-radius: 4px; }}
 
 QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}

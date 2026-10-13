@@ -13,11 +13,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from PySide6.QtCore import QObject, QRect, QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QPointF, QRect, QRectF, QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServices, QGuiApplication, QIcon, QPainter,
-                           QPalette, QPixmap, QStandardItem, QStandardItemModel)
+                           QPalette, QPen, QPixmap, QStandardItem, QStandardItemModel)
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
+    QAbstractItemView, QApplication, QGraphicsOpacityEffect, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
     QLabel, QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QSpinBox, QTableView, QToolButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
@@ -540,9 +540,68 @@ class SkillsPage(QWidget):
             self.applyRequested.emit(self.driver["id"], dict(self.pending))
 
 
+def wrench_icon(size=32):
+    """Гаечный ключ, нарисованный цветом текста темы (без эмодзи, чтобы везде выглядел одинаково)."""
+    pm = QPixmap(size, size)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.scale(size / 24, size / 24)
+    color = QColor(theme.c("text"))
+    p.setPen(QPen(color, 3.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+    p.drawLine(QPointF(5, 19), QPointF(13.2, 10.8))  # рукоять
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(color)
+    p.drawEllipse(QPointF(15.5, 8.5), 5.2, 5.2)  # головка
+    p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+    p.translate(15.5, 8.5)
+    p.rotate(-45)
+    p.drawRect(QRectF(-1.7, -7, 3.4, 6.5))  # зев ключа
+    p.end()
+    return QIcon(pm)
+
+
+class EditButton(QToolButton):
+    """Полупрозрачная кнопка правки в углу плитки; при наведении становится яркой."""
+
+    def __init__(self, parent, tip):
+        super().__init__(parent)
+        self.setObjectName("tileEdit")
+        self.setIcon(wrench_icon())
+        self.setIconSize(QSize(14, 14))
+        self.setFixedSize(20, 20)
+        self.setToolTip(tip)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAutoRaise(True)
+        self.fx = QGraphicsOpacityEffect(self)
+        self.fx.setOpacity(0.35)
+        self.setGraphicsEffect(self.fx)
+
+    def enterEvent(self, event):
+        self.fx.setOpacity(1.0)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.fx.setOpacity(0.35)
+        super().leaveEvent(event)
+
+
 class Tile(QFrame):
-    """Плитка сводки; двойной клик сообщает о себе (плитка «Деньги» открывает правку баланса)."""
+    """Плитка сводки. С on_edit: ключ в правом верхнем углу и двойной клик открывают правку."""
     doubleClicked = Signal()
+
+    def __init__(self, tip=None):
+        super().__init__()
+        self.edit_btn = EditButton(self, tip) if tip else None
+        if tip:
+            self.setToolTip(tip)
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def resizeEvent(self, event):
+        if self.edit_btn:
+            self.edit_btn.move(self.width() - self.edit_btn.width() - 3, 3)
+            self.edit_btn.raise_()
+        super().resizeEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         self.doubleClicked.emit()
@@ -552,6 +611,7 @@ class Tile(QFrame):
 class StatBar(QWidget):
     """Плитки сводки по компании над вкладками."""
     editMoney = Signal()
+    editLevel = Signal()
 
     def __init__(self):
         super().__init__()
@@ -562,37 +622,21 @@ class StatBar(QWidget):
         self.hint.setStyleSheet(f"color: {theme.c('muted')}; padding: 10px;")
         self.lay.addWidget(self.hint)
 
-    def _tile(self, label, value, accent=False, editable=False):
-        tile = Tile()
+    def _tile(self, label, value, accent=False, on_edit=None, tip=None):
+        tile = Tile(tip if on_edit else None)
         tile.setObjectName("tile")
+        if on_edit:
+            tile.doubleClicked.connect(on_edit)
+            tile.edit_btn.clicked.connect(on_edit)
         box = QVBoxLayout(tile)
-        box.setContentsMargins(14, 8, 14, 8)
+        box.setContentsMargins(14, 8, 26 if on_edit else 14, 8)  # справа место под ключ
         box.setSpacing(0)
         cap = QLabel(label.upper())
         cap.setObjectName("tileLabel")
         val = QLabel(value)
         val.setObjectName("tileValue")
         val.setProperty("accent", "true" if accent else "false")
-        if editable:
-            tip = tr("Изменить баланс и уровень (или двойной клик по плитке)")
-            tile.setToolTip(tip)
-            tile.setCursor(Qt.CursorShape.PointingHandCursor)
-            tile.doubleClicked.connect(self.editMoney.emit)
-            wrench = QToolButton()
-            wrench.setObjectName("tileEdit")
-            wrench.setText("🔧")
-            wrench.setToolTip(tip)
-            wrench.setCursor(Qt.CursorShape.PointingHandCursor)
-            wrench.setAutoRaise(True)
-            wrench.clicked.connect(self.editMoney.emit)
-            top = QHBoxLayout()
-            top.setContentsMargins(0, 0, 0, 0)
-            top.addWidget(cap)
-            top.addStretch(1)
-            top.addWidget(wrench)
-            box.addLayout(top)
-        else:
-            box.addWidget(cap)
+        box.addWidget(cap)
         box.addWidget(val)
         return tile
 
@@ -604,10 +648,12 @@ class StatBar(QWidget):
         busy = sum(1 for d in c["drivers"] if d["job"])
         tiles = []
         if c["money"] is not None:
-            tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, True))
+            tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, self.editMoney.emit,
+                          tr("Изменить баланс (или двойной клик по плитке)")))
         tiles += [
             (tr("Штаб"), c["hq"] or "-", False),
-            (tr("Уровень"), str(levels.level_for_xp(c["xp"])), False),
+            (tr("Уровень"), str(levels.level_for_xp(c["xp"])), False, self.editLevel.emit,
+             tr("Изменить уровень (или двойной клик по плитке)")),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
             (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
@@ -763,43 +809,35 @@ def big_spin(lo, hi, value):
     return box
 
 
-class BalanceDialog(QDialog):
-    """Правка баланса компании и уровня игрока (уровень записывается как опыт на начало этого уровня)."""
-    LEVEL_MAX = 500
+class ValueDialog(QDialog):
+    """Окно правки одного числа (баланс или уровень): поле, пояснение, ОК / Отмена."""
 
-    def __init__(self, parent, money, xp):
+    def __init__(self, parent, title, label, spin, note):
         super().__init__(parent)
-        self.setWindowTitle(tr("Баланс и уровень"))
-        self.money = big_spin(edit.MONEY_MIN, edit.MONEY_MAX, money)
-        # если в сейве значение вне диапазона поля, без правки пользователя оно не должно записаться обрезанным
-        self.money0 = self.money.value()
-        self.level0 = levels.level_for_xp(xp)
-        self.level = QSpinBox()
-        self.level.setRange(0, max(self.LEVEL_MAX, self.level0))
-        self.level.setValue(self.level0)
-        self.level.setToolTip(tr("Новый уровень записывается в сейв как опыт ровно на начало этого уровня."))
+        self.setWindowTitle(title)
+        self.spin = spin
+        self.start = spin.value()  # значение вне диапазона поля уже обрезано: без правки ничего не запишется
         form = QFormLayout()
-        form.addRow(tr("Баланс компании, €:"), self.money)
-        form.addRow(tr("Уровень игрока:"), self.level)
-        note = QLabel(tr("Сейчас: {money} €, уровень {lvl}. Очки навыков программа не начисляет.",
-                         money=core.money(money), lvl=self.level0))
-        note.setWordWrap(True)
-        note.setStyleSheet(f"color: {theme.c('muted')};")
+        form.addRow(label, spin)
+        hint = QLabel(note)
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {theme.c('muted')};")
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         lay = QVBoxLayout(self)
         lay.addLayout(form)
-        lay.addWidget(note)
+        lay.addWidget(hint)
         lay.addWidget(buttons)
+        spin.setFocus()
+        spin.selectAll()
 
-    def changes(self):
-        out = {}
-        if self.money.value() != self.money0:
-            out["money"] = self.money.value()
-        if self.level.value() != self.level0:
-            out["xp"] = levels.xp_for_level(self.level.value())
-        return out
+    def new_value(self):
+        """Новое значение или None, если не меняли."""
+        return self.spin.value() if self.spin.value() != self.start else None
+
+
+LEVEL_MAX = 500
 
 
 class UpdateChecker(QObject):
@@ -868,7 +906,8 @@ class MainWindow(QMainWindow):
         self.mtime = 0.0
 
         self.header = StatBar()
-        self.header.editMoney.connect(self.edit_balance)
+        self.header.editMoney.connect(self.edit_money)
+        self.header.editLevel.connect(self.edit_level)
         self.tabs = QTabWidget()
         self.pages = {}
         for key, title, headers, _ in self.TABS:
@@ -904,7 +943,8 @@ class MainWindow(QMainWindow):
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
 
         emenu = self.menuBar().addMenu(tr("Правка"))
-        self._action(emenu, tr("Баланс и уровень…"), self.edit_balance)
+        self._action(emenu, tr("Баланс…"), self.edit_money)
+        self._action(emenu, tr("Уровень…"), self.edit_level)
 
         lmenu = self.menuBar().addMenu("Язык / Language")
         for code, name in available_langs().items():
@@ -1334,29 +1374,43 @@ class MainWindow(QMainWindow):
         if self._confirm_write(tr("Прокачать навыки: {name}", name=d['name']) + "\n" + "\n".join(parts)):
             self._run_ops([("skills", d["skill_unit"], changes)], tr("Навыки {name} повышены.", name=d['name']))
 
-    def edit_balance(self):
+    def _economy_ready(self, need):
         if not self._need_save():
-            return
+            return False
+        if not self.company.get(need):
+            QMessageBox.information(self, tr("Нет данных"), tr("Не нашёл в сейве счёт компании или опыт игрока."))
+            return False
+        return True
+
+    def edit_money(self):
         c = self.company
-        if c.get("money") is None or not c.get("bank_unit") or not c.get("economy_unit"):
-            QMessageBox.information(self, tr("Баланс и уровень"), tr("Не нашёл в сейве счёт компании или опыт игрока."))
+        if not self._economy_ready("bank_unit") or c.get("money") is None:
             return
         money = core.to_int(c["money"])
-        dlg = BalanceDialog(self, money, c["xp"])
-        if not dlg.exec():
+        dlg = ValueDialog(self, tr("Баланс"), tr("Баланс компании, €:"), big_spin(edit.MONEY_MIN, edit.MONEY_MAX, money),
+                          tr("Сейчас: {money} €.", money=core.money(money)))
+        new = dlg.new_value() if dlg.exec() else None
+        if new is None:
             return
-        ch = dlg.changes()
-        if not ch:
+        if self._confirm_write(tr("Баланс: {a} € -> {b} €", a=core.money(money), b=core.money(new))):
+            self._run_ops([("money", c["bank_unit"], new)], tr("Баланс изменён."))
+
+    def edit_level(self):
+        c = self.company
+        if not self._economy_ready("economy_unit"):
             return
-        ops, parts = [], []
-        if "money" in ch:
-            ops.append(("money", c["bank_unit"], ch["money"]))
-            parts.append(tr("Баланс: {a} € -> {b} €", a=core.money(money), b=core.money(ch["money"])))
-        if "xp" in ch:
-            ops.append(("xp", c["economy_unit"], ch["xp"]))
-            parts.append(tr("Уровень: {a} -> {b}", a=levels.level_for_xp(c["xp"]), b=levels.level_for_xp(ch["xp"])))
-        if self._confirm_write(tr("Изменить баланс и уровень?") + "\n" + "\n".join(parts)):
-            self._run_ops(ops, tr("Баланс и уровень изменены."))
+        cur = levels.level_for_xp(c["xp"])
+        spin = QSpinBox()
+        spin.setRange(0, max(LEVEL_MAX, cur))
+        spin.setValue(cur)
+        dlg = ValueDialog(self, tr("Уровень"), tr("Уровень игрока:"), spin,
+                          tr("Сейчас: уровень {lvl}. В сейв записывается опыт ровно на начало выбранного уровня; "
+                             "очки навыков программа не начисляет.", lvl=cur))
+        new = dlg.new_value() if dlg.exec() else None
+        if new is None:
+            return
+        if self._confirm_write(tr("Уровень: {a} -> {b}", a=cur, b=new)):
+            self._run_ops([("xp", c["economy_unit"], levels.xp_for_level(new))], tr("Уровень изменён."))
 
     def change_plate(self):
         if not self._need_save():
