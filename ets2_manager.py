@@ -468,6 +468,7 @@ def build_company(sv: Save) -> dict:
                 "vehicles": sum(1 for x in g.get("vehicles[]", []) if x not in (None, "", "null")),
                 "drivers": sum(1 for x in g.get("drivers[]", []) if x not in (None, "", "null")),
                 "trailers": sum(1 for x in g.get("trailers[]", []) if x not in (None, "", "null")),
+                "slots": max(len(g.get("drivers[]", [])), len(g.get("vehicles[]", []))),
                 "productivity": round(f32(g.get("productivity")) * 100, 1),
                 "net_day": profit_stats(sv, g.get("profit_log"), now // 1440)["net_day"],
             })

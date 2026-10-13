@@ -5,6 +5,7 @@
 A desktop tool for managing your in-game company in Euro Truck Simulator 2. It reads your save file and shows
 every driver, truck, trailer, garage and job in one place, and can safely repair, refuel, rename plates,
 upgrade garages and level up driver skills in the save.
+- **Warnings line** above the tabs: drivers with a problem, worn trucks, drivers without a truck, trucks without a driver, empty garage slots. Click an item to see just those rows.
 
 ## Features
 

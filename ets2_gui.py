@@ -5,6 +5,7 @@
 Запуск:     python ets2_gui.py
 Рядом с ets2_gui.py должны лежать ets2_manager.py и папки requirements, tools, assets, locales.
 """
+import html
 import os
 import random
 import sys
@@ -136,6 +137,25 @@ SORT_ROLE = Qt.ItemDataRole.UserRole
 KEY_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
+class KeyFilterProxy(QSortFilterProxyModel):
+    """Текстовый фильтр + необязательный список ключей строк (переход из строки предупреждений)."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.keys = None
+
+    def set_keys(self, keys):
+        self.keys = set(keys) if keys is not None else None
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, row, parent):
+        if self.keys is not None:
+            first = self.sourceModel().index(row, 0, parent)
+            if first.data(KEY_ROLE) not in self.keys:
+                return False
+        return super().filterAcceptsRow(row, parent)
+
+
 class TablePage(QWidget):
     """Вкладка: поле фильтра + таблица с сортировкой по клику на заголовок."""
 
@@ -146,7 +166,7 @@ class TablePage(QWidget):
         self.model = QStandardItemModel(0, len(headers))
         self.model.setHorizontalHeaderLabels([tr(h) for h in headers])
 
-        self.proxy = QSortFilterProxyModel(self)
+        self.proxy = KeyFilterProxy(self)
         self.proxy.setSourceModel(self.model)
         self.proxy.setSortRole(SORT_ROLE)
         self.proxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -177,9 +197,13 @@ class TablePage(QWidget):
         self.filter.textChanged.connect(self.proxy.setFilterFixedString)
         self.filter.textChanged.connect(lambda _=None: self._update_count())
         self.count = QLabel()
+        self.key_reset = QPushButton()
+        self.key_reset.setVisible(False)
+        self.key_reset.clicked.connect(lambda: self.show_keys(None))
 
         top = QHBoxLayout()
         top.addWidget(self.filter, 1)
+        top.addWidget(self.key_reset)
         top.addWidget(self.count)
         self.actions = QHBoxLayout()
         self.actions.setSpacing(8)
@@ -215,6 +239,14 @@ class TablePage(QWidget):
             if items:
                 items[0].setData(key, KEY_ROLE)
             self.model.appendRow(items)
+        self._update_count()
+
+    def show_keys(self, keys, label=""):
+        """Показать только строки с этими ключами (None - все строки)."""
+        self.proxy.set_keys(keys)
+        self.key_reset.setText("✕  " + label if label else "")
+        self.key_reset.setToolTip(tr("Показать все строки"))
+        self.key_reset.setVisible(keys is not None)
         self._update_count()
 
     def _update_count(self):
@@ -1190,6 +1222,17 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(10)
         layout.addWidget(self.header)
+        self.warn_bar = QLabel()
+        self.warn_bar.setObjectName("warnBar")
+        self.warn_bar.setWordWrap(True)
+        self.warn_bar.setTextFormat(Qt.TextFormat.RichText)
+        self.warn_bar.setStyleSheet("#warnBar { background: rgba(230, 160, 20, 45); border: 1px solid rgba(230, 160, 20, 140);"
+                                    " border-radius: 6px; padding: 6px 10px; }")
+        self.warn_bar.setToolTip(tr("Нажмите на пункт, чтобы открыть эти строки"))
+        self.warn_bar.linkActivated.connect(self.show_warning)
+        self.warn_bar.setVisible(False)
+        self._warnings = []
+        layout.addWidget(self.warn_bar)
         layout.addWidget(self.tabs, 1)
         self.setCentralWidget(central)
 
@@ -1496,7 +1539,30 @@ class MainWindow(QMainWindow):
             rows = rows_fn(c)
             self.pages[key].set_rows(rows)
             self.tabs.setTabText(i, f"{tr(title)} ({len(rows)})")
+            self.pages[key].show_keys(None)
         self.skills.set_company(c)
+        self.set_warnings(view.warnings(c))
+
+    def set_warnings(self, items):
+        self._warnings = items
+        if not items:
+            self.warn_bar.setVisible(False)
+            return
+        color = "#ffc24a" if theme.mode() == "dark" else "#7a4f00"
+        links = " &nbsp;·&nbsp; ".join(f'<a href="{i}" style="color:{color}">{html.escape(text)}</a>'
+                                       for i, (_, text, _) in enumerate(items))
+        self.warn_bar.setText(f"⚠&nbsp; {links}")
+        self.warn_bar.setVisible(True)
+
+    def show_warning(self, href):
+        try:
+            tab, text, keys = self._warnings[int(href)]
+        except (ValueError, IndexError):
+            return
+        self.tabs.setCurrentIndex([k for k, *_ in self.TABS].index(tab))
+        page = self.pages[tab]
+        page.filter.clear()
+        page.show_keys(keys, text)
 
     def open_driver(self, driver_id):
         driver = next((d for d in self.company["drivers"] if d["id"] == driver_id), None)

@@ -354,5 +354,12 @@
  "Копия грузовика:": "Truck copy:",
  "Своих грузовиков без водителя переедет к новым водителям: {n}.": "Own trucks without a driver moving to new drivers: {n}.",
  "Своих грузовиков нет, копировать нечего.": "You own no trucks to copy.",
- "Грузовик {t} уже не свободен: обновите данные (F5).": "Truck {t} is no longer free: refresh the data (F5)."
+ "Грузовик {t} уже не свободен: обновите данные (F5).": "Truck {t} is no longer free: refresh the data (F5).",
+ "Нажмите на пункт, чтобы открыть эти строки": "Click an item to open these rows",
+ "Показать все строки": "Show all rows",
+ "водителей без грузовика: {n}": "drivers without a truck: {n}",
+ "водителей с проблемой: {n}": "drivers with a problem: {n}",
+ "грузовиков без водителя: {n}": "trucks without a driver: {n}",
+ "грузовиков с износом от {p}%: {n}": "trucks with wear {p}%+: {n}",
+ "пустых мест для водителей: {n}": "empty driver slots: {n}"
 }

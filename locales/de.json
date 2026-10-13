@@ -354,5 +354,12 @@
  "Копия грузовика:": "Lkw-Kopie:",
  "Своих грузовиков без водителя переедет к новым водителям: {n}.": "Eigene Lkw ohne Fahrer, die zu neuen Fahrern wechseln: {n}.",
  "Своих грузовиков нет, копировать нечего.": "Keine eigenen Lkw zum Kopieren.",
- "Грузовик {t} уже не свободен: обновите данные (F5).": "Lkw {t} ist nicht mehr frei: Daten aktualisieren (F5)."
+ "Грузовик {t} уже не свободен: обновите данные (F5).": "Lkw {t} ist nicht mehr frei: Daten aktualisieren (F5).",
+ "Нажмите на пункт, чтобы открыть эти строки": "Klicken Sie auf einen Punkt, um diese Zeilen zu öffnen",
+ "Показать все строки": "Alle Zeilen anzeigen",
+ "водителей без грузовика: {n}": "Fahrer ohne Lkw: {n}",
+ "водителей с проблемой: {n}": "Fahrer mit Problem: {n}",
+ "грузовиков без водителя: {n}": "Lkw ohne Fahrer: {n}",
+ "грузовиков с износом от {p}%: {n}": "Lkw mit Verschleiß ab {p}%: {n}",
+ "пустых мест для водителей: {n}": "freie Fahrerplätze: {n}"
 }

@@ -5,6 +5,7 @@
 Ein Desktop-Programm, mit dem du deine Firma in Euro Truck Simulator 2 im Blick behältst. Es liest den
 Spielstand und zeigt Fahrer, Zugmaschinen, Anhänger, Garagen und Aufträge an einer Stelle. Im Spielstand kann es
 sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern und Fahrerfähigkeiten verbessern.
+- **Hinweiszeile** über den Tabs: Fahrer mit Problem, verschlissene Lkw, Fahrer ohne Lkw, Lkw ohne Fahrer, freie Garagenplätze. Ein Klick zeigt nur diese Zeilen.
 
 ## Funktionen
 

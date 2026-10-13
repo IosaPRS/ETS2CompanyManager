@@ -264,6 +264,37 @@ def garage_rows(c):
     return rows
 
 
+WEAR_WARN = 25.0  # с этого износа ячейка уже жёлтая
+
+
+def warnings(c):
+    """Что стоит проверить после загрузки: [(вкладка, текст, ключи строк)]. Только показ, в сейв ничего не пишется."""
+    out = []
+    drivers = c["drivers"]
+    problem = [d["id"] for d in drivers if has_problem(d)]
+    if problem:
+        out.append(("drivers", tr("водителей с проблемой: {n}", n=len(problem)), problem))
+    worn = [d["id"] for d in drivers if d["truck"] and d["truck"]["wear_max"] >= WEAR_WARN]
+    worn += [t["unit"] for t in c.get("free_trucks", []) if t["wear_max"] >= WEAR_WARN]
+    if worn:
+        out.append(("trucks", tr("грузовиков с износом от {p}%: {n}", p=int(WEAR_WARN), n=len(worn)), worn))
+    no_truck = [d["id"] for d in drivers if not d.get("is_player") and not d["truck"]]
+    if no_truck:
+        out.append(("drivers", tr("водителей без грузовика: {n}", n=len(no_truck)), no_truck))
+    free = [t["unit"] for t in c.get("free_trucks", [])]
+    if free:
+        out.append(("trucks", tr("грузовиков без водителя: {n}", n=len(free)), free))
+    empty, gids = 0, []
+    for g in c["garages"]:
+        cap = g.get("slots", 0)  # места в сейве - длина массива drivers[]
+        if g["drivers"] < cap:
+            empty += cap - g["drivers"]
+            gids.append(g["id"])
+    if empty:
+        out.append(("garages", tr("пустых мест для водителей: {n}", n=empty), gids))
+    return out
+
+
 def job_rows(c):
     rows = []
     for d in c["drivers"]:
