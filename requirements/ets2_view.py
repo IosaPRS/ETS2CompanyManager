@@ -192,6 +192,19 @@ def truck_rows(c):
         tx, ti = truck_status(d)
         cells.append(cell(tx, tint=status_tint(tx), icon="status:" + ti, center=True))
         rows.append((d["id"], cells))
+    for t in c.get("free_trucks", []):  # без водителя: ключ строки - сам грузовик
+        w = t["wear"]
+        cells = [cell(t["model"], icon=t["brand"], tip=tr("Номер: {plate}", plate=t['plate'])), cell(t["plate"]),
+                 cell("-", tip=tr("Гараж: {city}", city=t["garage"]) if t["garage"] else None),
+                 num_cell(t["odometer"]), cell(f'{t["fuel_pct"]:.0f}%', t["fuel_pct"], center=True)]
+        cells += [wear_cell(w[k]) for k in ("engine", "transmission", "cabin", "chassis", "wheels")]
+        cells.append(wear_cell(t["wear_max"]))
+        pm = t["perm_max"]
+        cells.append(cell(f"{pm:.1f}%", pm, tint=RED + (110,) if pm >= PERMANENT_WEAR_LIMIT else (AMBER + (110,) if pm >= 20 else None),
+                          center=True, tip=tr("Постоянный (неремонтируемый) износ: с 30% водитель отказывается ехать")))
+        cells.append(cell(tr("без водителя"), tint=status_tint(tr("простаивает")), icon="status:" + status_spec("truck_status_idle", "gray"),
+                          center=True))
+        rows.append((t["unit"], cells))
     return rows
 
 

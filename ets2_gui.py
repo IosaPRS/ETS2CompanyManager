@@ -686,7 +686,7 @@ class StatBar(QWidget):
             (tr("Уровень"), str(levels.level_for_xp(c["xp"])), False, self.editLevel.emit,
              tr("Изменить уровень (или двойной клик по плитке)")),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
-            (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
+            (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"]) + len(c.get("free_trucks", []))), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
             (tr("Гаражи"), str(len(c["garages"])), False),
             (tr("Пробег"), f"{core.money(c['distance_km'])} " + tr("км"), False),
@@ -1471,6 +1471,10 @@ class MainWindow(QMainWindow):
         key = self.pages[tab].current_key()
         if not key:
             return None
+        if tab == "trucks":
+            t = next((x for x in self.company.get("free_trucks", []) if x["unit"] == key), None)
+            if t:
+                return ("truck", t["unit"], t)
         if tab in ("drivers", "trucks"):
             d = next((x for x in self.company["drivers"] if x["id"] == key), None)
             return ("truck", d["truck"]["unit"], d["truck"]) if d and d["truck"] else None
@@ -1529,6 +1533,7 @@ class MainWindow(QMainWindow):
         if not self._need_save():
             return
         units = [d["truck"]["unit"] for d in self.company["drivers"] if d["truck"]]
+        units += [t["unit"] for t in self.company.get("free_trucks", [])]
         units += [t["unit"] for t in self.company["trailers"]]
         if self._confirm_write(tr("Починить все траки и прицепы компании ({n} шт.)?", n=len(units))):
             full = self.full_repair_checked()
@@ -1549,6 +1554,7 @@ class MainWindow(QMainWindow):
         if not self._need_save():
             return
         units = [d["truck"]["unit"] for d in self.company["drivers"] if d["truck"]]
+        units += [t["unit"] for t in self.company.get("free_trucks", [])]
         if self._confirm_write(tr("Заправить все траки компании ({n} шт.) до полного бака?", n=len(units))):
             self._run_ops([("refuel", u) for u in dict.fromkeys(units)], tr("Все баки заполнены."))
 

@@ -474,6 +474,18 @@ def build_company(sv: Save) -> dict:
 
     owned_trailers = [t for t in (build_trailer(sv, n) for n in pl.get("trailers[]", [])) if t]
 
+    # грузовики без водителя (стоят в гараже на месте без водителя или вообще не в гараже)
+    used = {d["truck"]["unit"] for d in drivers if d["truck"]}
+    truck_garage = {v: city(g["_name"]) for g in sv.by_type.get("garage", []) for v in g.get("vehicles[]", [])}
+    free_trucks = []
+    for n in dict.fromkeys(pl.get("trucks[]", [])):
+        if n in used:
+            continue
+        t = build_truck(sv, n)
+        if t:
+            t["garage"] = truck_garage.get(n, "")
+            free_trucks.append(t)
+
     return {
         "hq": (pl.get("hq_city") or "").capitalize(),
         "money": bank.get("money_account"),
@@ -491,6 +503,7 @@ def build_company(sv: Save) -> dict:
         "drivers": drivers,
         "garages": garages,
         "trailers": owned_trailers,
+        "free_trucks": free_trucks,
     }
 
 

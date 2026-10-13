@@ -333,5 +333,7 @@
  "агентство": "Agentur",
  "запас": "Reserve",
  "цена, €:": "Preis, €:",
- "Без рейса": "Kein Auftrag"
+ "Без рейса": "Kein Auftrag",
+ "без водителя": "ohne Fahrer",
+ "Гараж: {city}": "Garage: {city}"
 }
