@@ -28,6 +28,8 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern, Fahrer verb
 **Windows-.exe**: `ETS2CompanyManager.exe` herunterladen und starten. Sie findet den neuesten Spielstand unter
 `Documents\Euro Truck Simulator 2\profiles\...\save\`; sonst *Datei → Spielstand öffnen* wählen und `game.sii` angeben.
 
+Spielstände von American Truck Simulator lassen sich ebenfalls öffnen, aber Lkw-Namen, Logos und Fahrernamen sind vorerst für ETS2 gemacht. Unterstützung für ATS-Lkw und -Fahrer kommt bald.
+
 **Aus dem Quellcode** (Python 3.10+):
 
 ```
@@ -45,27 +47,12 @@ Eine Konsolenübersicht gibt es auch: `python ets2_manager.py "<Pfad zu game.sii
   Um den gewählten Spielstand selbst zu ändern, schalte *Einstellungen → Änderungen in Kopie des Spielstands speichern* aus; dann muss das Spiel geschlossen sein.
 - Vor jeder Änderung landet eine Kopie im Ordner `ets2cm_backups` neben `game.sii`.
   *Datei → Letzte Änderung rückgängig* (Strg+Z) oder *Datei → Spielstand aus Sicherung wiederherstellen* spielt sie zurück. Die letzten 20 Kopien bleiben erhalten.
-- Geld und EP werden auch in `info.sii` aktualisiert, damit die Spielstandliste des Spiels die neuen Werte zeigt.
-- Das Programm ändert nur die nötigen Felder, vergleicht das Ergebnis mit dem Original und schreibt nichts,
-  wenn sich noch etwas anderes unterscheidet.
 
 ## Sprachen und Designs
 
 Die Sprache findest du unter *Einstellungen → Sprache* (beim ersten Start die Systemsprache, sonst Englisch), *Design* in der Menüleiste. Die Übersetzungen sind einfache JSON-Dateien in `locales/`.
 Für eine neue Sprache `en.json` kopieren, die Werte übersetzen, `"_name"` setzen und die Datei in den Ordner legen; sie erscheint im Menü.
 Details in `locales/README.md`.
-
-## Bekannte Grenzen
-
-- Stufen werden aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); angestellte Fahrer brauchen pro Stufe doppelt so viel Erfahrung wie der Spieler. An einem Spielstand mit dem Spiel abgeglichen (Spieler 368.497 XP = Stufe 69; bei zwei Fahrern stimmte auch der Erfahrungsbalken). Im Reiter „Fähigkeiten“ bekommt ein Fahrer einen Fähigkeitspunkt pro Stufe (maximal 36); für mehr Punkte erhöhst du dort die Stufe.
-- Eingestellte Fahrer stammen aus den Bewerbern, die das Spiel bereits im Spielstand hat; neue Zugmaschinen und Anhänger sind Kopien deiner eigenen, auf neu zurückgesetzt. Im Spiel an einem Spielstand geprüft.
-- ADR-Klassen sind den Bits aufsteigend zugeordnet (1, 2, 3, 4, 6, 8); prüfe eine Änderung im Spiel, bevor du dich darauf verlässt.
-- „Leerfahrt“ wird aus einem Auftrag mit null Frachteinheiten geschätzt.
-- Die Garagenproduktivität wird aus dem Gewinn der letzten 7 Tage und dem Garagenpreis berechnet
-  (150.000 € klein, 300.000 € groß); sie stimmte mit den Werten im Spiel überein.
-- Die Erweiterungskosten gibst du selbst ein: den Preis, den das Spiel anzeigt.
-- Spielstände von American Truck Simulator lassen sich ebenfalls öffnen, aber Lkw-Namen, Logos und Fahrernamen sind für ETS2 gemacht.
-- Fahrernamen stammen aus der Tabelle `requirements/driver_names.json` (der Spielstand enthält keine); jeden Fahrer kannst du umbenennen.
 
 ## Hinweise
 
