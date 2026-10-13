@@ -299,7 +299,6 @@
  "В сейве нет данных компании, заполнение отменено.": "Im Spielstand fehlen Firmendaten, Auffüllen abgebrochen.",
  "Во всех ваших гаражах уже есть водители и грузовики.": "Alle Ihre Garagen haben bereits Fahrer und Lkw.",
  "Водителя {d} уже нет среди свободных: обновите данные (F5).": "Fahrer {d} ist nicht mehr verfügbar: Daten aktualisieren (F5).",
- "Выбрать лучших": "Die Besten wählen",
  "Гаражи заполнены.": "Garagen aufgefüllt.",
  "Гаражи со свободными местами:": "Garagen mit freien Plätzen:",
  "Где": "Wo",
@@ -319,7 +318,6 @@
  "Нужно водителей": "Fahrer benötigt",
  "Нужно грузовиков": "Lkw benötigt",
  "Один водитель выбран дважды.": "Derselbe Fahrer ist zweimal gewählt.",
- "Отмечает водителей с самым высоким уровнем, сколько нужно для отмеченных гаражей": "Markiert die Fahrer mit der höchsten Stufe, so viele wie die markierten Garagen brauchen",
  "Отмечено лишних водителей: {n}, для них нет свободных мест.": "{n} Fahrer zu viel markiert: für sie gibt es keine freien Plätze.",
  "Прицеп каждому новому водителю:": "Ein Auflieger für jeden neuen Fahrer:",
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Verfügbare Fahrer (Agentur und Reserve des Spiels). Markieren Sie, wen Sie einstellen:",
@@ -342,5 +340,11 @@
  "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Achtung: Der Spielstand wurde nach dieser Änderung verändert (das Spiel hat wohl gespeichert). Alles danach geht verloren.",
  "Отменить правку?": "Änderung rückgängig machen?",
  "Последняя правка отменена.": "Die letzte Änderung wurde rückgängig gemacht.",
- "Сверка info.sii не прошла, он не изменён.": "Prüfung von info.sii fehlgeschlagen; sie wurde nicht geändert."
+ "Сверка info.sii не прошла, он не изменён.": "Prüfung von info.sii fehlgeschlagen; sie wurde nicht geändert.",
+ "Лучшие (высокий уровень)": "Beste (hohe Stufe)",
+ "Случайные": "Zufällig",
+ "Дешёвые (низкий уровень)": "Günstigste (niedrige Stufe)",
+ "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Wen markieren, so viele wie die markierten Garagen brauchen. Markierungen lassen sich von Hand ändern.",
+ "Подобрать заново": "Neu auswählen",
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "Die Vorlage-Aufliegerkombination ist zu lang, Auffüllen abgebrochen."
 }

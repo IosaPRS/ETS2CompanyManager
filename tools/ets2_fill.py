@@ -192,13 +192,10 @@ def truck_templates(sv):
 
 
 def trailer_templates(sv):
-    """Свои прицепы, которые можно копировать: одиночные (без второго прицепа в сцепке)."""
+    """Свои прицепы, которые можно копировать (одиночные и сцепки)."""
     pl = sv.one("player") or {}
     out = []
     for n in pl.get("trailers[]", []):
-        u = sv.units.get(n) or {}
-        if not is_empty(u.get("slave_trailer")):
-            continue
         t = core.build_trailer(sv, n)
         if t:
             out.append(t)
@@ -271,6 +268,17 @@ def _clone(b: Blocks, name, game_time, new_units, refs=("accessories",), reset=T
     b.add_unit(utype, nid, body)
     new_units.add(nid)
     return nid
+
+
+def _clone_trailer(b: Blocks, name, game_time, new_units, depth=0):
+    """Копия прицепа вместе со сцепкой (slave_trailer: второй и третий прицеп у двойных и HCT)."""
+    if depth > 4:
+        raise EditError(tr("Сцепка прицепов-образца слишком длинная, заполнение отменено."))
+    tid = _clone(b, name, game_time, new_units)
+    slave = b.get(tid, "slave_trailer")
+    if not is_empty(slave):
+        b.set(tid, "slave_trailer", _clone_trailer(b, slave, game_time, new_units, depth + 1))
+    return tid
 
 
 def _add_event(b: Blocks, sv, eco, time_, unit_link, param, new_units):
@@ -377,7 +385,7 @@ def apply_fill(lines, sv, plan):
             nd = b.new_id()
             b.add_unit("trailer_def", nd, list(b.unit(tdef)[1:-1]))
             new_units.add(nd)
-            tid = _clone(b, tpl, game_time, new_units)
+            tid = _clone_trailer(b, tpl, game_time, new_units)
             b.set(tid, "trailer_definition", nd)
             ulog = b.new_id()
             b.add_unit("trailer_utilization_log", ulog, [" entries: 0", " total_driven_distance_km: 0",

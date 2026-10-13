@@ -6,6 +6,7 @@
 Рядом с ets2_gui.py должны лежать ets2_manager.py и папки requirements, tools, assets, locales.
 """
 import os
+import random
 import sys
 import threading
 from datetime import datetime
@@ -905,7 +906,7 @@ class FillDialog(QDialog):
         self.gtable.resizeColumnsToContents()
         self.gtable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.gtable.setMaximumHeight(200)
-        self.gtable.itemChanged.connect(lambda *_: self._update())
+        self.gtable.itemChanged.connect(lambda *_: self._pick())  # другие гаражи - другое число мест
 
         # --- водители ---
         heads = ["", tr("Имя"), tr("Ур."), "ADR"] + [tr(t) for _, t in self.SKILL_COLS] + [tr("Где")]
@@ -935,9 +936,14 @@ class FillDialog(QDialog):
         self.dtable.setColumnWidth(0, 64)
         self.dtable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.dtable.itemChanged.connect(lambda *_: self._update())
-        best = QPushButton(tr("Выбрать лучших"))
-        best.setToolTip(tr("Отмечает водителей с самым высоким уровнем, сколько нужно для отмеченных гаражей"))
-        best.clicked.connect(self._pick_best)
+        self.mode = QComboBox()
+        self.mode.addItem(tr("Лучшие (высокий уровень)"), "best")
+        self.mode.addItem(tr("Случайные"), "random")
+        self.mode.addItem(tr("Дешёвые (низкий уровень)"), "cheap")
+        self.mode.setToolTip(tr("Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную."))
+        self.mode.currentIndexChanged.connect(lambda *_: self._pick())
+        best = QPushButton(tr("Подобрать заново"))
+        best.clicked.connect(self._pick)
         none = QPushButton(tr("Снять выбор"))
         none.clicked.connect(lambda: self._check_drivers(set()))
 
@@ -986,6 +992,7 @@ class FillDialog(QDialog):
 
         pick_row = QHBoxLayout()
         pick_row.addWidget(QLabel(tr("Свободные водители (агентство и запас игры). Отметьте, кого нанять:")), 1)
+        pick_row.addWidget(self.mode)
         pick_row.addWidget(best)
         pick_row.addWidget(none)
         lay = QVBoxLayout(self)
@@ -997,7 +1004,7 @@ class FillDialog(QDialog):
         lay.addWidget(hint)
         lay.addWidget(self.summary)
         lay.addWidget(self.buttons)
-        self._pick_best()
+        self._pick()
 
     # --- выбор ---
     def _chosen_garages(self):
@@ -1018,8 +1025,15 @@ class FillDialog(QDialog):
         self.dtable.blockSignals(False)
         self._update()
 
-    def _pick_best(self):
-        self._check_drivers({d["id"] for d in self.pool[:self._need_drivers()]})
+    def _pick(self):
+        n, mode = self._need_drivers(), self.mode.currentData()
+        if mode == "random":
+            chosen = random.sample(self.pool, min(n, len(self.pool)))
+        elif mode == "cheap":
+            chosen = sorted(self.pool, key=lambda d: (d["xp"], d["name"]))[:n]
+        else:
+            chosen = self.pool[:n]
+        self._check_drivers({d["id"] for d in chosen})
 
     def build_plan(self):
         drivers = self._chosen_drivers()

@@ -299,7 +299,6 @@
  "В сейве нет данных компании, заполнение отменено.": "The save has no company data, filling cancelled.",
  "Во всех ваших гаражах уже есть водители и грузовики.": "All your garages already have drivers and trucks.",
  "Водителя {d} уже нет среди свободных: обновите данные (F5).": "Driver {d} is no longer available: refresh the data (F5).",
- "Выбрать лучших": "Pick the best",
  "Гаражи заполнены.": "Garages filled.",
  "Гаражи со свободными местами:": "Garages with free slots:",
  "Где": "Where",
@@ -319,7 +318,6 @@
  "Нужно водителей": "Drivers needed",
  "Нужно грузовиков": "Trucks needed",
  "Один водитель выбран дважды.": "The same driver is selected twice.",
- "Отмечает водителей с самым высоким уровнем, сколько нужно для отмеченных гаражей": "Ticks the highest-level drivers, as many as the ticked garages need",
  "Отмечено лишних водителей: {n}, для них нет свободных мест.": "{n} extra drivers ticked: there are no free slots for them.",
  "Прицеп каждому новому водителю:": "A trailer for each new driver:",
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Available drivers (agency and the game's reserve). Tick who to hire:",
@@ -342,5 +340,11 @@
  "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Warning: the save changed after this edit (the game seems to have saved). Everything since then will be lost.",
  "Отменить правку?": "Undo the edit?",
  "Последняя правка отменена.": "The last edit was undone.",
- "Сверка info.sii не прошла, он не изменён.": "info.sii check failed; it was not changed."
+ "Сверка info.sii не прошла, он не изменён.": "info.sii check failed; it was not changed.",
+ "Лучшие (высокий уровень)": "Best (high level)",
+ "Случайные": "Random",
+ "Дешёвые (низкий уровень)": "Cheapest (low level)",
+ "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Who to tick, as many as the ticked garages need. You can change the ticks by hand.",
+ "Подобрать заново": "Pick again",
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "The template trailer combination is too long, filling cancelled."
 }

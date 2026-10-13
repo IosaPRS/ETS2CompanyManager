@@ -299,7 +299,6 @@
  "В сейве нет данных компании, заполнение отменено.": "La sauvegarde ne contient pas de données d'entreprise, remplissage annulé.",
  "Во всех ваших гаражах уже есть водители и грузовики.": "Tous vos garages ont déjà des chauffeurs et des camions.",
  "Водителя {d} уже нет среди свободных: обновите данные (F5).": "Le chauffeur {d} n'est plus disponible : actualisez les données (F5).",
- "Выбрать лучших": "Choisir les meilleurs",
  "Гаражи заполнены.": "Garages remplis.",
  "Гаражи со свободными местами:": "Garages avec des places libres :",
  "Где": "Où",
@@ -319,7 +318,6 @@
  "Нужно водителей": "Chauffeurs requis",
  "Нужно грузовиков": "Camions requis",
  "Один водитель выбран дважды.": "Le même chauffeur est choisi deux fois.",
- "Отмечает водителей с самым высоким уровнем, сколько нужно для отмеченных гаражей": "Coche les chauffeurs de plus haut niveau, autant que les garages cochés en ont besoin",
  "Отмечено лишних водителей: {n}, для них нет свободных мест.": "{n} chauffeurs en trop cochés : il n'y a pas de place libre pour eux.",
  "Прицеп каждому новому водителю:": "Une remorque pour chaque nouveau chauffeur :",
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Chauffeurs disponibles (agence et réserve du jeu). Cochez ceux à embaucher :",
@@ -342,5 +340,11 @@
  "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Attention : la sauvegarde a changé après cette modification (le jeu semble avoir sauvegardé). Tout ce qui a suivi sera perdu.",
  "Отменить правку?": "Annuler la modification ?",
  "Последняя правка отменена.": "La dernière modification a été annulée.",
- "Сверка info.sii не прошла, он не изменён.": "Vérification d'info.sii échouée ; il n'a pas été modifié."
+ "Сверка info.sii не прошла, он не изменён.": "Vérification d'info.sii échouée ; il n'a pas été modifié.",
+ "Лучшие (высокий уровень)": "Meilleurs (niveau élevé)",
+ "Случайные": "Aléatoires",
+ "Дешёвые (низкий уровень)": "Moins chers (niveau bas)",
+ "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Qui cocher, autant que les garages cochés en ont besoin. Vous pouvez modifier les coches à la main.",
+ "Подобрать заново": "Choisir à nouveau",
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "L'attelage de la remorque modèle est trop long, remplissage annulé."
 }
