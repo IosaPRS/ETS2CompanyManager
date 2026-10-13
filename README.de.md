@@ -51,7 +51,7 @@ Eine Konsolenübersicht gibt es auch: `python ets2_manager.py "<Pfad zu game.sii
 
 ## Sprachen und Designs
 
-*Sprache / Language* und *Design* findest du in der Menüleiste. Die Übersetzungen sind einfache JSON-Dateien in `locales/`.
+Die Sprache findest du unter *Einstellungen → Sprache* (beim ersten Start die Systemsprache, sonst Englisch), *Design* in der Menüleiste. Die Übersetzungen sind einfache JSON-Dateien in `locales/`.
 Für eine neue Sprache `en.json` kopieren, die Werte übersetzen, `"_name"` setzen und die Datei in den Ordner legen; sie erscheint im Menü.
 Details in `locales/README.md`.
 

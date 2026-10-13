@@ -366,5 +366,6 @@
  "\n\nПравка запишется в этот же слот-копию (копия до правки будет в ets2cm_backups). Если он сейчас загружен в игре, после правки загрузите его заново.": "\n\nLa modification sera écrite dans cet emplacement-copie (une sauvegarde va dans ets2cm_backups). S’il est chargé dans le jeu, rechargez-le ensuite.",
  "В info.sii нет описания сохранения.": "info.sii ne contient pas de description de sauvegarde.",
  "Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. В игре: Загрузить игру → этот слот.": "Enregistré dans un nouvel emplacement « {name} » (dossier {folder}). La sauvegarde d’origine est inchangée. Dans le jeu : Charger une partie → cet emplacement.",
- "Сохранять правки в копию сейва («… Edited»)": "Enregistrer les modifications dans une copie (« … Edited »)"
+ "Сохранять правки в копию сейва («… Edited»)": "Enregistrer les modifications dans une copie (« … Edited »)",
+ "Язык": "Langue"
 }

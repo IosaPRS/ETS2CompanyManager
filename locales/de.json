@@ -366,5 +366,6 @@
  "\n\nПравка запишется в этот же слот-копию (копия до правки будет в ets2cm_backups). Если он сейчас загружен в игре, после правки загрузите его заново.": "\n\nDie Änderung wird direkt in diesen Kopie-Slot geschrieben (eine Sicherung kommt nach ets2cm_backups). Ist er gerade im Spiel geladen, lade ihn danach neu.",
  "В info.sii нет описания сохранения.": "info.sii enthält keine Spielstandbeschreibung.",
  "Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. В игре: Загрузить игру → этот слот.": "In neuem Slot „{name}“ gespeichert (Ordner {folder}). Der ursprüngliche Spielstand ist unverändert. Im Spiel: Spiel laden → diesen Slot.",
- "Сохранять правки в копию сейва («… Edited»)": "Änderungen in Kopie des Spielstands speichern („… Edited“)"
+ "Сохранять правки в копию сейва («… Edited»)": "Änderungen in Kopie des Spielstands speichern („… Edited“)",
+ "Язык": "Sprache"
 }

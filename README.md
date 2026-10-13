@@ -51,7 +51,7 @@ A command-line summary is also available: `python ets2_manager.py "<path to game
 
 ## Languages and themes
 
-*Language / Language* and *Theme* are in the menu bar. Translations are plain JSON files in `locales/`.
+The language is under *Settings → Language* (on first start the system language is used, otherwise English); *Theme* is in the menu bar. Translations are plain JSON files in `locales/`.
 To add a language, copy `en.json`, translate the values, set `"_name"` and drop it in the folder; it shows up in the menu.
 See `locales/README.md`.
 

@@ -1,6 +1,6 @@
 # Translations / Переводы / Übersetzungen / Traductions
 
-Each file `<code>.json` is one language (`en.json`, `de.json`, `fr.json`, ...). It appears in the menu **Язык / Language** by itself.
+Each file `<code>.json` is one language (`en.json`, `de.json`, `fr.json`, ...). It appears in **Settings → Language** by itself.
 
 Format: a flat JSON object, `"Russian source phrase": "translation"`.
 The special key `"_name"` is the language name shown in the menu.

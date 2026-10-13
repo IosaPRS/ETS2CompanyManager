@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from PySide6.QtCore import QObject, QPointF, QRect, QRectF, QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QLocale, QObject, QPointF, QRect, QRectF, QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServices, QGuiApplication, QIcon, QPainter,
                            QPalette, QPen, QPixmap, QStandardItem, QStandardItemModel)
 from PySide6.QtWidgets import (
@@ -44,6 +44,12 @@ ICON_H = 22
 _icons = {}
 SETTINGS_ORG, SETTINGS_APP = "ets2-company-manager", "gui"
 UI_SCALES = (100, 110, 125, 150, 175)  # масштаб интерфейса поверх масштаба Windows, %
+
+
+def default_lang():
+    """Язык при первом запуске: язык системы, если для него есть перевод, иначе английский."""
+    code = QLocale.system().name().split("_")[0].lower()
+    return code if code in available_langs() else "en"
 
 
 def app_settings():
@@ -1251,10 +1257,6 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
 
-        lmenu = self.menuBar().addMenu("Язык / Language")
-        for code, name in available_langs().items():
-            act = self._action(lmenu, name, lambda c=code: self.switch_language(c), checkable=True)
-            act.setChecked(code == get_lang())
         tmenu = self.menuBar().addMenu(tr("Тема"))
         self.theme_actions = []
         for mode, label in (("dark", tr("Тёмная")), ("light", tr("Светлая"))):
@@ -1264,6 +1266,11 @@ class MainWindow(QMainWindow):
             self.theme_actions.append(act)
 
         smenu = self.menuBar().addMenu(tr("Настройки"))
+        lmenu = smenu.addMenu(tr("Язык") + " / Language" if get_lang() != "en" else "Language")
+        for code, name in available_langs().items():
+            act = self._action(lmenu, name, lambda c=code: self.switch_language(c), checkable=True)
+            act.setChecked(code == get_lang())
+        smenu.addSeparator()
         self.update_action = self._action(smenu, tr("Проверять обновления при запуске"), lambda: None, checkable=True)
         self.update_action.setChecked(self.settings.value("check_updates", True, type=bool))
         self.update_action.toggled.connect(lambda on: self.settings.setValue("check_updates", on))
@@ -1891,7 +1898,7 @@ def main():
         except (AttributeError, OSError):
             pass
     app.setWindowIcon(QIcon(str(ASSETS_ROOT / "ui" / "app_icon.png")))
-    set_lang(app_settings().value("lang", "ru"))
+    set_lang(app_settings().value("lang", default_lang()))
     theme.apply(app, ASSETS_ROOT / "ui", app_settings().value("theme", "dark"))
     _window = MainWindow()
     _window.restore_window()
