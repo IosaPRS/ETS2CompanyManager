@@ -16,7 +16,7 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern, Fahrer verb
 - **Reiter „Fähigkeiten“**: Für jeden Fahrer wählst du wie im Spiel, was verbessert wird (Ferntransport, wertvolle
   und zerbrechliche Fracht, Just-in-time, ökologisches Fahren und die sechs ADR-Klassen).
 - **Spielstand ändern**: Reparieren (alle oder Auswahl), Betanken, Kennzeichen ändern, kleine Garage auf groß erweitern, Fähigkeiten erhöhen,
-  Firmenkontostand und Spielerstufe ändern (Schraubenschlüssel oder Doppelklick auf die Kacheln *Geld* und *Stufe*).
+  Firmenkontostand und Spielerstufe ändern.
 - **Garagen auffüllen** (Reiter *Garagen*): Fahrer aus der Bewerberliste des Spiels auf freie Plätze einstellen
   (beste, zufällige oder günstigste), ihnen freie eigene Zugmaschinen oder Kopien deiner Zugmaschinen geben und Anhänger hinzufügen. Einstellen ohne Zugmaschine geht auch.
 - **Hinweiszeile** über den Tabs: Fahrer mit Problem, verschlissene Zugmaschinen, Fahrer ohne Zugmaschine, Zugmaschinen ohne Fahrer, freie Garagenplätze.

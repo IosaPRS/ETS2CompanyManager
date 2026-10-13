@@ -16,7 +16,7 @@ upgrade garages, level up drivers and fill empty garages with new drivers, truck
 - **Skills tab**: pick what to level up for every driver, like in the game (long distance, high value cargo,
   fragile cargo, just-in-time, ecodriving and the six ADR classes).
 - **Save editing**: repair (all or selected), refuel, change plates, upgrade a small garage to a large one, raise skills,
-  change the company balance and player level (the wrench or a double-click on the *Money* and *Level* tiles).
+  change the company balance and player level.
 - **Fill garages** (*Garages* tab): hire drivers into empty garage slots from the game's own pool of applicants
   (best, random or cheapest), give them your spare trucks or copies of your trucks, and add trailers. Drivers can also be hired without trucks.
 - **Warnings line** above the tabs: drivers with a problem, worn trucks, drivers without a truck, trucks without a driver, empty garage slots.
