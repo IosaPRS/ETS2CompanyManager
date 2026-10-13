@@ -1,14 +1,16 @@
 """Данные для окна без Qt: строки таблиц, текст карточки водителя, поиск сейва, имена."""
 import html
 import json
+import re
 from pathlib import Path
 
 import ets2_manager as core
+from requirements.levels import level_progress
 from requirements.ets2_i18n import tr
 
 GREEN, RED, AMBER = (76, 175, 80), (229, 57, 53), (255, 179, 0)
 
-DRIVER_HEADERS = ["Водитель", "Город", "Гараж", "XP", "ADR", "Дальн.", "Тяжёл.", "Хрупк.", "Срочн.",
+DRIVER_HEADERS = ["Водитель", "Город", "Гараж", "XP", "Ур.", "ADR", "Дальн.", "Тяжёл.", "Хрупк.", "Срочн.",
                   "Эко", "Σ навыков", "Трак", "Прицеп", "Статус", "Маршрут", "Прибыль", "€/день"]
 TRUCK_HEADERS = ["Модель", "Номер", "Водитель", "Пробег км", "Топливо %", "Двигатель",
                  "Трансм.", "Кабина", "Шасси", "Колёса", "Макс.", "Постоянный", "Статус"]
@@ -40,9 +42,11 @@ def has_problem(d):
 
 def driver_status(d):
     """(текст, значок@фон) для водителя."""
-    if not d["truck"] or str(d.get("state")) == STATE_NO_TRUCK:
+    # игрок на быстром заказе едет на грузовике компании-заказчика
+    quick_job = d.get("quick_job") or (d.get("is_player") and d["job"] and not d["truck"])
+    if not quick_job and (not d["truck"] or str(d.get("state")) == STATE_NO_TRUCK):
         return tr("без трака"), status_spec("no_vehicle", "red")
-    if has_problem(d):
+    if not quick_job and has_problem(d):
         return tr("требует ремонта"), status_spec("driver_status_truck_undrivable", "red")
     ph = job_phase(d)
     if ph == "parked":
@@ -55,9 +59,10 @@ def driver_status(d):
 
 
 def truck_status(d):
-    t = d["truck"]
     if has_problem(d):
         return tr("требует ремонта"), status_spec("truck_status_undrivable", "red")
+    if d.get("quick_job"):  # свой грузовик стоит, игрок едет на грузовике заказчика
+        return tr("простаивает"), status_spec("truck_status_idle", "gray")
     ph = job_phase(d)
     if ph == "parked":
         return tr("на стоянке"), status_spec("truck_status_parked_on_job", "blue")
@@ -139,10 +144,10 @@ def c_num(n, tint=None):
 
 
 def route_text(d):
-    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - прочерк."""
+    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - «Без рейса»."""
     j = d["job"]
     if not j:
-        return "-"
+        return tr("Без рейса")
     return tr("{src} → {dst} · {cargo} · {km} км", src=j["source"], dst=j["target"], cargo=j["cargo"], km=j["km"])
 
 
@@ -154,7 +159,8 @@ def driver_rows(c):
         st_text, st_icon = driver_status(d)
         cells = [
             name, cell(d["city"]), cell(d["garage"] or "-"),
-            num_cell(d["xp"]),
+            cell("-", -1, center=True) if d["is_player"] else num_cell(d["xp"]),  # у профиля показываем только уровень
+            c_num(d["level"]),
             c_num(d["adr_classes"], skill_tint(d["adr_classes"])),
         ]
         cells += [c_num(s[k], skill_tint(s[k])) for k in ("long_dist", "heavy", "fragile", "urgent", "mechanical")]
@@ -188,6 +194,33 @@ def truck_rows(c):
         tx, ti = truck_status(d)
         cells.append(cell(tx, tint=status_tint(tx), icon="status:" + ti, center=True))
         rows.append((d["id"], cells))
+    for t in c.get("free_trucks", []):  # без водителя: ключ строки - сам грузовик
+        w = t["wear"]
+        cells = [cell(t["model"], icon=t["brand"], tip=tr("Номер: {plate}", plate=t['plate'])), cell(t["plate"]),
+                 cell("-", tip=tr("Гараж: {city}", city=t["garage"]) if t["garage"] else None),
+                 num_cell(t["odometer"]), cell(f'{t["fuel_pct"]:.0f}%', t["fuel_pct"], center=True)]
+        cells += [wear_cell(w[k]) for k in ("engine", "transmission", "cabin", "chassis", "wheels")]
+        cells.append(wear_cell(t["wear_max"]))
+        pm = t["perm_max"]
+        cells.append(cell(f"{pm:.1f}%", pm, tint=RED + (110,) if pm >= PERMANENT_WEAR_LIMIT else (AMBER + (110,) if pm >= 20 else None),
+                          center=True, tip=tr("Постоянный (неремонтируемый) износ: с 30% водитель отказывается ехать")))
+        cells.append(cell(tr("без водителя"), tint=status_tint(tr("простаивает")), icon="status:" + status_spec("truck_status_idle", "gray"),
+                          center=True))
+        rows.append((t["unit"], cells))
+    t = c.get("job_truck")
+    if t:  # грузовик быстрой работы: не свой, но игрок едет на нём и может его разбить
+        player = next((d for d in c["drivers"] if d.get("is_player")), None)
+        w = t["wear"]
+        cells = [cell(t["model"], icon=t["brand"], tip=tr("Грузовик компании-заказчика (быстрая работа), не ваш")),
+                 cell(t["plate"]), cell(player["name"] if player else "-"),
+                 num_cell(t["odometer"]), cell(f'{t["fuel_pct"]:.0f}%', t["fuel_pct"], center=True)]
+        cells += [wear_cell(w[k]) for k in ("engine", "transmission", "cabin", "chassis", "wheels")]
+        cells.append(wear_cell(t["wear_max"]))
+        pm = t["perm_max"]
+        cells.append(cell(f"{pm:.1f}%", pm, center=True))
+        cells.append(cell(tr("быстрая работа"), tint=status_tint(tr("в рейсе")),
+                          icon="status:" + status_spec("trailer_status_on_job", "green"), center=True))
+        rows.append((t["unit"], cells))
     return rows
 
 
@@ -206,6 +239,14 @@ def trailer_rows(c):
                                       tip=tr("Км рейсов водителя за сохранённую историю (до 14 дней), не весь пробег")),
                                  wear_cell(t["wear"]),
                                  cell(tx, tint=status_tint(tx), icon="status:" + ti, center=True)]))
+    t = c.get("job_trailer")
+    if t:
+        player = next((d for d in c["drivers"] if d.get("is_player")), None)
+        rows.append((t["unit"], [cell(t["kind"], tip=tr("Прицеп компании-заказчика (быстрая работа), не ваш")), cell(t["plate"]),
+                                 cell(player["name"] if player else "-"), num_cell(t["odometer"]), cell("-", 0, True),
+                                 wear_cell(t["wear"]),
+                                 cell(tr("быстрая работа"), tint=status_tint(tr("в рейсе")),
+                                      icon="status:" + status_spec("trailer_status_on_job", "green"), center=True)]))
     return rows
 
 
@@ -247,6 +288,37 @@ def garage_rows(c):
     return rows
 
 
+WEAR_WARN = 25.0  # с этого износа ячейка уже жёлтая
+
+
+def warnings(c):
+    """Что стоит проверить после загрузки: [(вкладка, текст, ключи строк)]. Только показ, в сейв ничего не пишется."""
+    out = []
+    drivers = c["drivers"]
+    problem = [d["id"] for d in drivers if has_problem(d)]
+    if problem:
+        out.append(("drivers", tr("водителей с проблемой: {n}", n=len(problem)), problem))
+    worn = [d["id"] for d in drivers if d["truck"] and d["truck"]["wear_max"] >= WEAR_WARN]
+    worn += [t["unit"] for t in c.get("free_trucks", []) + [c.get("job_truck")] if t and t["wear_max"] >= WEAR_WARN]
+    if worn:
+        out.append(("trucks", tr("грузовиков с износом от {p}%: {n}", p=int(WEAR_WARN), n=len(worn)), worn))
+    no_truck = [d["id"] for d in drivers if not d.get("is_player") and not d["truck"]]
+    if no_truck:
+        out.append(("drivers", tr("водителей без грузовика: {n}", n=len(no_truck)), no_truck))
+    free = [t["unit"] for t in c.get("free_trucks", [])]
+    if free:
+        out.append(("trucks", tr("грузовиков без водителя: {n}", n=len(free)), free))
+    empty, gids = 0, []
+    for g in c["garages"]:
+        cap = g.get("slots", 0)  # места в сейве - длина массива drivers[]
+        if g["drivers"] < cap:
+            empty += cap - g["drivers"]
+            gids.append(g["id"])
+    if empty:
+        out.append(("garages", tr("пустых мест для водителей: {n}", n=empty), gids))
+    return out
+
+
 def job_rows(c):
     rows = []
     for d in c["drivers"]:
@@ -272,13 +344,22 @@ def safe_money(v):
         return str(v)
 
 
+def level_text(d):
+    """Водитель: 'Уровень 7: 2 666 / 3 200 XP' (как полоска в игре); профиль игрока: только 'Уровень 69'."""
+    if d["is_player"]:
+        return tr("<b>Уровень {lvl}</b>", lvl=d["level"])
+    lvl, have, need = level_progress(d["xp"])
+    return tr("<b>Уровень {lvl}:</b> {have} / {need} XP", lvl=lvl, have=core.money(have), need=core.money(need))
+
+
 def driver_card_html(d):
     e = html.escape
     s, st, t, trl, j = d["skills"], d["stats"], d["truck"], d["trailer"], d["job"]
     lines = [
         f"<h3>{e(d['name'])} <small>({e(d['id'])})</small></h3>",
-        tr("<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage} &nbsp; <b>XP:</b> {xp}",
-           home=e(d['hometown']), city=e(d['city']), garage=e(d['garage'] or '-'), xp=core.money(d['xp'])),
+        tr("<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage}",
+           home=e(d['hometown']), city=e(d['city']), garage=e(d['garage'] or '-')),
+        level_text(d),
         tr("<b>Навыки:</b> ADR {adr}/6, дальние {ld}, тяжёлые {hv}, хрупкие {fr}, срочные {ur}, эко {me}",
            adr=d['adr_classes'], ld=s['long_dist'], hv=s['heavy'], fr=s['fragile'], ur=s['urgent'], me=s['mechanical']),
     ]
@@ -304,14 +385,110 @@ def driver_card_html(d):
 
 # ---------- сейвы и имена ----------
 
-def find_latest_save():
-    """Самый свежий game.sii среди всех профилей и сохранений."""
+GAMES = (("ets2", "Euro Truck Simulator 2"), ("ats", "American Truck Simulator"))
+PROFILE_DIRS = ("profiles", "steam_profiles")
+
+
+def documents_dirs():
+    """Возможные папки «Документы»: обычная, в OneDrive и из USERPROFILE (без повторов)."""
+    import os
     home = Path.home()
-    roots = [home / "Documents", home / "OneDrive" / "Documents"]
-    found = []
-    for root in roots:
-        found += list((root / "Euro Truck Simulator 2" / "profiles").glob("*/save/*/game.sii"))
-    return max(found, key=lambda p: p.stat().st_mtime) if found else None
+    cands = [home / "Documents", home / "OneDrive" / "Documents", home / "OneDrive" / "Документы"]
+    if os.environ.get("USERPROFILE"):
+        cands.append(Path(os.environ["USERPROFILE"]) / "Documents")
+    out, seen = [], set()
+    for p in cands:
+        key = str(p).lower()
+        if key not in seen and p.is_dir():
+            seen.add(key)
+            out.append(p)
+    return out
+
+
+def _mtime(p):
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def sii_text(value) -> str:
+    """Строка из сейва: не-ASCII там записан байтами вида \\xd0\\x91 (UTF-8), их нужно собрать обратно."""
+    raw = str(value or "")
+    if "\\x" not in raw:
+        return raw
+    try:
+        return re.sub(rb"\\x([0-9a-fA-F]{2})", lambda m: bytes([int(m[1], 16)]), raw.encode("utf-8")).decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+
+
+def slot_title(slot_dir: Path) -> str:
+    """Название слота: поле name из info.sii; если его нет, по имени папки (autosave, quicksave, 1...)."""
+    info = slot_dir / "info.sii"
+    name = ""
+    if info.exists():
+        try:
+            sv = core.Save(info)
+            unit = sv.one("save_container") or next(iter(sv.units.values()), {})
+            name = sii_text(unit.get("name")).strip()
+        except (SystemExit, Exception):  # битый или нечитаемый info.sii не мешает выбору
+            name = ""
+    if name and not name.startswith("@@"):
+        return name
+    folder = slot_dir.name
+    if folder == "autosave" or folder.startswith("autosave"):
+        return tr("Автосохранение")
+    if folder == "quicksave":
+        return tr("Быстрое сохранение")
+    if folder.isdigit():
+        return tr("Слот {n}", n=folder)
+    return folder
+
+
+def find_profiles(read_titles=True):
+    """Все профили ETS2 и ATS: [{'game', 'game_name', 'name', 'dir', 'saves': [{'title', 'slot', 'path', 'mtime'}], 'mtime'}].
+
+    Сортировка: сначала профили со свежими сейвами. read_titles=False не читает info.sii (быстрее).
+    """
+    profiles = []
+    for docs in documents_dirs():
+        for code, game in GAMES:
+            for sub in PROFILE_DIRS:
+                root = docs / game / sub
+                if not root.is_dir():
+                    continue
+                for pdir in sorted(x for x in root.iterdir() if x.is_dir()):
+                    saves = []
+                    for gp in (pdir / "save").glob("*/game.sii"):
+                        saves.append({"slot": gp.parent.name, "path": gp, "mtime": _mtime(gp),
+                                      "title": slot_title(gp.parent) if read_titles else gp.parent.name})
+                    if not saves:
+                        continue
+                    saves.sort(key=lambda x: -x["mtime"])
+                    profiles.append({"game": code, "game_name": game, "dir": pdir, "saves": saves,
+                                     "name": core.profile_name_from_path(pdir) or pdir.name,
+                                     "steam": sub == "steam_profiles", "mtime": saves[0]["mtime"]})
+    profiles.sort(key=lambda x: -x["mtime"])
+    return profiles
+
+
+def profile_dir_of(save_path):
+    """.../profiles/<hex>/save/<слот>/game.sii -> папка профиля или None."""
+    p = Path(save_path)
+    if p.parent.parent.name == "save":
+        return p.parent.parent.parent
+    return None
+
+
+def find_latest_save(profile_dir=None):
+    """Самый свежий game.sii: в указанном профиле или среди всех профилей ETS2 и ATS."""
+    if profile_dir:
+        found = list(Path(profile_dir).glob("save/*/game.sii"))
+        if found:
+            return max(found, key=_mtime)
+    profiles = find_profiles(read_titles=False)
+    return profiles[0]["saves"][0]["path"] if profiles else None
 
 
 def save_nickname(driver_id, name):

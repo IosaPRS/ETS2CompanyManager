@@ -26,7 +26,7 @@ from pathlib import Path
 
 from requirements.ets2_i18n import tr
 from requirements.paths import data_path
-from requirements import ets2_names, sii_decode
+from requirements import ets2_names, levels, sii_decode
 
 DECRYPTOR = None  # например r"C:\Tools\SII_Decrypt.exe"
 
@@ -274,6 +274,12 @@ def build_trailer(sv: Save, name):
         return None
     d = sv.ref(t.get("trailer_definition")) or {}
     code = accessory_match(sv, t, TRAILER_PATH)
+    body_type = d.get("body_type")
+    tdef = str(t.get("trailer_definition") or "")
+    if not d and tdef.startswith("trailer_def."):  # прицеп заказчика: определение из игры, не юнит сейва
+        parts = tdef.split(".")  # trailer_def.scs.box.single_3.curtain
+        body_type = {"curtain": "curtainside"}.get(parts[-1], parts[-1])
+        code = code or ".".join(parts[1:3])
     parts = {
         "body": part_wear(t, "trailer_body_wear"),
         "chassis": part_wear(t, "chassis_wear"),
@@ -281,7 +287,7 @@ def build_trailer(sv: Save, name):
     }
     return {
         "unit": name,
-        "kind": ets2_names.trailer_name(code, d.get("body_type")),
+        "kind": ets2_names.trailer_name(code, body_type),
         "plate": clean_plate(t.get("license_plate")),
         "plate_body": plate_body(t.get("license_plate")),
         "odometer": to_int(t.get("odometer")),
@@ -338,6 +344,9 @@ def parse_job(sv: Save, ref, now: int):
     j = sv.ref(ref)
     if not j:
         return None
+    empty = (None, "", "null")
+    if j.get("cargo") in empty and j.get("source_company") in empty and j.get("target_company") in empty:
+        return None  # пустой job_info: у водителя нет заказа (так у только что нанятых и у ждущих в гараже)
     src_co, src_city = company_city(j.get("source_company"))
     dst_co, dst_city = company_city(j.get("target_company"))
     start = to_int(j.get("start_time"))
@@ -393,6 +402,7 @@ def build_company(sv: Save) -> dict:
     eco, pl = sv.one("economy") or {}, sv.one("player") or {}
     bank = sv.ref(eco.get("bank")) or {}
     nick = load_nicknames()
+    own = _read_names(custom_names_path())  # имена, которые пользователь задал сам
     now = to_int(eco.get("game_time"))
 
     # водитель -> домашний гараж
@@ -428,11 +438,13 @@ def build_company(sv: Save) -> dict:
         adr_classes = bin(skills["adr"]).count("1")
         truck_ref = slot_truck.get(did) or (trucks[i] if i < len(trucks) else None)
         truck = build_truck(sv, truck_ref) if truck_ref else None
-        job = parse_job(sv, d.get("driver_job"), now)
+        job = parse_job(sv, pl.get("current_job") if is_player else d.get("driver_job"), now)  # игрок: player.current_job (юнит player_job)
         trailer_ref = player_trailer if is_player else d.get("assigned_trailer")
         drivers.append({
             "id": did,
-            "name": nick.get(did) or ((sv.profile_name or tr("Я (игрок)")) if is_player else tr("Водитель №{n}", n=did.rpartition('.')[2])),
+            # игрок: имя профиля (общий список имён к нему не относится, иначе игрок получает имя чужого водителя)
+            "name": ((own.get(did) or sv.profile_name or tr("Я (игрок)")) if is_player
+                     else nick.get(did) or tr("Водитель №{n}", n=did.rpartition('.')[2])),
             "is_player": is_player,
             "hometown": ((pl.get("hq_city") if is_player else d.get("hometown")) or "").capitalize(),
             "city": (d.get("current_city") or (pl.get("hq_city") if is_player else "") or "").capitalize(),
@@ -440,6 +452,7 @@ def build_company(sv: Save) -> dict:
             "state": d.get("state"),
             "status": "в рейсе" if job else ("без трака" if truck is None else "свободен"),
             "xp": to_int(src.get("experience_points")),
+            "level": levels.driver_level(to_int(src.get("experience_points")), is_player),
             "skills": skills,
             "skill_unit": eco.get("_name") if is_player else did,  # юнит, где лежат навыки (игрок: economy)
             "adr_classes": adr_classes,
@@ -461,15 +474,42 @@ def build_company(sv: Save) -> dict:
                 "vehicles": sum(1 for x in g.get("vehicles[]", []) if x not in (None, "", "null")),
                 "drivers": sum(1 for x in g.get("drivers[]", []) if x not in (None, "", "null")),
                 "trailers": sum(1 for x in g.get("trailers[]", []) if x not in (None, "", "null")),
+                "slots": max(len(g.get("drivers[]", [])), len(g.get("vehicles[]", []))),
                 "productivity": round(f32(g.get("productivity")) * 100, 1),
                 "net_day": profit_stats(sv, g.get("profit_log"), now // 1440)["net_day"],
             })
 
     owned_trailers = [t for t in (build_trailer(sv, n) for n in pl.get("trailers[]", [])) if t]
 
+    # грузовики без водителя (стоят в гараже на месте без водителя или вообще не в гараже)
+    used = {d["truck"]["unit"] for d in drivers if d["truck"]}
+    truck_garage = {v: city(g["_name"]) for g in sv.by_type.get("garage", []) for v in g.get("vehicles[]", [])}
+    free_trucks = []
+    for n in dict.fromkeys(pl.get("trucks[]", [])):
+        if n in used:
+            continue
+        t = build_truck(sv, n)
+        if t:
+            t["garage"] = truck_garage.get(n, "")
+            free_trucks.append(t)
+
+    # быстрая работа: игрок едет на грузовике и прицепе компании-заказчика (их нет в player.trucks/trailers)
+    pjob = sv.ref(pl.get("current_job")) or {}
+    job_truck = job_trailer = None
+    ct, ctr = pjob.get("company_truck"), pjob.get("company_trailer")
+    if ct not in (None, "", "null", "nil") and ct not in pl.get("trucks[]", []):
+        job_truck = build_truck(sv, ct)
+    if ctr not in (None, "", "null", "nil") and ctr not in pl.get("trailers[]", []):
+        job_trailer = build_trailer(sv, ctr)
+    for d in drivers:
+        d["quick_job"] = bool(d["is_player"] and d["job"] and job_truck)
+
     return {
+        "job_truck": job_truck,
+        "job_trailer": job_trailer,
         "hq": (pl.get("hq_city") or "").capitalize(),
         "money": bank.get("money_account"),
+        "economy_unit": eco.get("_name"),
         "bank_unit": eco.get("bank"),
         "game_days": to_int(eco.get("game_time")) / 1440,
         "xp": to_int(eco.get("experience_points")),
@@ -483,6 +523,7 @@ def build_company(sv: Save) -> dict:
         "drivers": drivers,
         "garages": garages,
         "trailers": owned_trailers,
+        "free_trucks": free_trucks,
     }
 
 

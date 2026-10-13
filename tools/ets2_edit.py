@@ -1,4 +1,4 @@
-"""Запись в сейв: ремонт, заправка, номера, апгрейд гаража, навыки. Перед записью делается копия в ets2cm_backups."""
+"""Запись в сейв: ремонт, заправка, номера, апгрейд гаража, навыки, баланс и опыт. Перед записью делается копия в ets2cm_backups."""
 import os
 import re
 import shutil
@@ -25,16 +25,19 @@ class EditError(Exception):
 
 # ---------- проверки окружения ----------
 
+GAME_EXES = ("eurotrucks2.exe", "amtrucks.exe")  # ETS2 и ATS
+
+
 def game_running() -> bool:
-    """True, если запущена игра (Windows: eurotrucks2.exe). На других системах всегда False."""
+    """True, если запущена ETS2 или ATS (Windows, по списку процессов). На других системах всегда False."""
     if not sys.platform.startswith("win"):
         return False
     try:
-        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq eurotrucks2.exe", "/NH"], capture_output=True,
-                             text=True, timeout=10, creationflags=0x08000000).stdout
+        out = subprocess.run(["tasklist", "/NH", "/FO", "CSV"], capture_output=True,
+                             text=True, timeout=10, creationflags=0x08000000).stdout.lower()
     except (OSError, subprocess.SubprocessError):
         return False
-    return "eurotrucks2.exe" in out.lower()
+    return any(f'"{exe}"' in out for exe in GAME_EXES)
 
 
 # ---------- текст сейва ----------
@@ -203,48 +206,225 @@ def raise_skills(lines, unit_id, changes: dict):
         set_field(lines, unit_id, key, str(new))
 
 
+MONEY_MIN, MONEY_MAX = -2_147_483_648, 2_147_483_647  # поле в игре 64-битное; берём безопасный 32-битный диапазон
+XP_MAX = 4_294_967_295  # предел 32-битного поля без знака; в игре не проверен
+
+
+def set_int_field(lines, unit_id, key, value: int, lo: int, hi: int, what: str):
+    """Меняет целое поле (баланс, опыт). Поле должно уже быть в юните и быть целым числом."""
+    cur = get_field(lines, unit_id, key)
+    if cur is None or not re.fullmatch(r"-?\d+", cur):
+        raise EditError(tr("У юнита {unit} нет поля {key}: структура сейва неожиданная, правка отменена.", unit=unit_id, key=key))
+    value = int(value)
+    if not lo <= value <= hi:
+        raise EditError(tr("{what}: допустимо от {lo} до {hi}.", what=what, lo=f"{lo:,}".replace(",", " "),
+                           hi=f"{hi:,}".replace(",", " ")))
+    return set_field(lines, unit_id, key, str(value))
+
+
 # ---------- сверка и запись ----------
 
-def _diff_units(a: "core.Save", b: "core.Save"):
-    """Список (unit, field) с отличиями между двумя разобранными сейвами; структурные отличия -> EditError."""
-    if set(a.units) != set(b.units):
+def _diff_units(a: "core.Save", b: "core.Save", new_units=frozenset(), reshaped=frozenset()):
+    """Список (unit, field) с отличиями между двумя разобранными сейвами; структурные отличия -> EditError.
+    new_units: юниты, которые должны появиться; reshaped: юниты, у которых могут появиться поля (пустой массив стал непустым)."""
+    if set(b.units) != set(a.units) | set(new_units) or set(new_units) & set(a.units):
         raise EditError(tr("Сверка не прошла: набор юнитов в результате отличается от оригинала."))
-    diffs = []
+    diffs = [(n, "*") for n in new_units]
     for name, ua in a.units.items():
         ub = b.units[name]
-        if ua.keys() != ub.keys():
+        if ua.keys() != ub.keys() and not (name in reshaped and ua.keys() <= ub.keys()):
             raise EditError(tr("Сверка не прошла: у юнита {name} изменился набор полей.", name=name))
-        for k, v in ua.items():
-            if v != ub[k]:
+        for k, v in ub.items():
+            if v != ua.get(k):
                 diffs.append((name, k))
     return diffs
 
 
-def backup(path: Path) -> Path:
+BACKUP_KEEP = 20  # сколько последних копий game.sii хранить (вместе с парными info.sii)
+INFO_FIELDS = {"info_players_experience": ("economy", "experience_points"), "info_money_account": ("bank", "money_account")}
+
+
+def backup(path: Path, stamp=None) -> Path:
     folder = Path(path).parent / BACKUP_DIR
     folder.mkdir(exist_ok=True)
-    dst = folder / f"{Path(path).stem}_{time.strftime('%Y%m%d_%H%M%S')}{Path(path).suffix}"
+    stamp = stamp or time.strftime('%Y%m%d_%H%M%S')
+    dst = folder / f"{Path(path).stem}_{stamp}{Path(path).suffix}"
     shutil.copy2(path, dst)
     return dst
 
 
+def _stamp_of(backup_file: Path) -> str:
+    m = re.search(r"(\d{8}_\d{6})$", Path(backup_file).stem)
+    return m[1] if m else ""
+
+
+def paired_info(backup_file: Path):
+    """Копия info.sii, сделанная вместе с этой копией game.sii (или None)."""
+    p = Path(backup_file).parent / f"info_{_stamp_of(backup_file)}.sii"
+    return p if p.exists() else None
+
+
 def list_backups(path: Path):
+    """Копии game.sii (без копий info.sii), сверху самая свежая."""
     folder = Path(path).parent / BACKUP_DIR
-    return sorted(folder.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True) if folder.exists() else []
+    if not folder.exists():
+        return []
+    files = folder.glob(f"{Path(path).stem}_*{Path(path).suffix}")
+    return sorted(files, key=lambda p: (_stamp_of(p), p.stat().st_mtime), reverse=True)
+
+
+def prune_backups(path: Path, keep=BACKUP_KEEP):
+    """Удаляет старые копии сверх keep (и их парные info.sii). Возвращает число удалённых копий."""
+    old = list_backups(path)[keep:]
+    for b in old:
+        info = paired_info(b)
+        b.unlink(missing_ok=True)
+        if info:
+            info.unlink(missing_ok=True)
+    return len(old)
 
 
 def restore_backup(path: Path, backup_file: Path):
     if game_running():
         raise EditError(tr("Закройте игру перед восстановлением сейва."))
     shutil.copy2(backup_file, path)
+    info = paired_info(backup_file)
+    if info and (Path(path).parent / "info.sii").exists():
+        shutil.copy2(info, Path(path).parent / "info.sii")
 
 
-def apply_ops(path, ops, expected_mtime=None):
-    """ops: [('repair', unit, full), ('plate', unit, 'ABC 123'), ('skills', unit, {'long_dist': 3}), ...]. Возвращает отчёт."""
+def backup_time(backup_file: Path):
+    """Когда сделана копия (по имени файла), в секундах epoch; None, если имя без отметки времени."""
+    try:
+        return time.mktime(time.strptime(_stamp_of(backup_file), "%Y%m%d_%H%M%S"))
+    except ValueError:
+        return None
+
+
+def undo_last(path: Path):
+    """Отмена последней правки: самая свежая копия становится сейвом и удаляется из списка копий
+    (следующая отмена откатит ещё на шаг). Возвращает восстановленную копию."""
+    backups = list_backups(path)
+    if not backups:
+        raise EditError(tr("Резервных копий этого сейва пока нет."))
+    last = backups[0]
+    restore_backup(path, last)
+    info = paired_info(last)
+    last.unlink(missing_ok=True)
+    if info:
+        info.unlink(missing_ok=True)
+    return last
+
+
+EDITED_SUFFIX = " Edited"
+
+
+def sii_quote(text: str) -> str:
+    """Строка для значения SII в кавычках: не-ASCII как \\xNN по байтам UTF-8 (как пишет игра), кавычки и \\ убираются."""
+    out = []
+    for ch in text:
+        if ch in '"\\':
+            continue
+        if 32 <= ord(ch) < 127:
+            out.append(ch)
+        else:
+            out.extend(f"\\x{b:02x}" for b in ch.encode("utf-8"))
+    return '"' + "".join(out) + '"'
+
+
+def make_edited_copy(path: Path, name: str, game_time=None) -> Path:
+    """Копирует слот сохранения с game.sii в новую папку-слот (следующий свободный номер) и даёт ему имя name.
+    Исходный слот не трогается. Возвращает путь к game.sii копии."""
+    src = Path(path).parent
+    root = src.parent
+    nums = [int(p.name) for p in root.iterdir() if p.is_dir() and p.name.isdigit()]
+    dst = root / str(max(nums, default=0) + 1)
+    try:
+        dst.mkdir()
+        for f in src.iterdir():
+            if f.is_file() and not f.name.endswith(".ets2cm.tmp"):
+                shutil.copy2(f, dst / f.name)
+        info_path = dst / "info.sii"
+        donor = not info_path.exists()
+        if donor:  # у части автосохранений info.sii нет: берём из соседнего слота
+            donors = sorted((p / "info.sii" for p in root.iterdir() if (p / "info.sii").is_file()),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+            if donors:
+                shutil.copy2(donors[0], info_path)
+        if info_path.exists():
+            text = read_text(info_path)
+            lines = text.split("\n")
+            unit = (parse_text(text).one("save_container") or {}).get("_name")
+            if not unit:
+                raise EditError(tr("В info.sii нет описания сохранения."))
+            set_field(lines, unit, "name", sii_quote(name))
+            set_field(lines, unit, "file_time", str(int(time.time())))
+            if donor and game_time is not None and re.fullmatch(r"\d+", str(game_time)):
+                set_field(lines, unit, "time", str(game_time))
+            _atomic_write(info_path, "\n".join(lines))
+    except Exception:
+        shutil.rmtree(dst, ignore_errors=True)
+        raise
+    return dst / Path(path).name
+
+
+def _atomic_write(path: Path, text: str):
+    tmp = path.with_name(path.name + ".ets2cm.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as exc:
+        tmp.unlink(missing_ok=True)
+        raise EditError(tr("Не удалось записать файл ({exc}). Возможно, он занят другой программой.", exc=exc)) from None
+
+
+def info_updates(info_text: str, sv: "core.Save") -> dict:
+    """Поля info.sii (опыт и деньги в списке сохранений игры), которые расходятся с game.sii: {поле: новое значение}."""
+    eco = sv.one("economy") or {}
+    src = {"economy": eco, "bank": sv.ref(eco.get("bank")) or {}}
+    info = parse_text(info_text).one("save_container") or {}
+    out = {}
+    for key, (unit, field) in INFO_FIELDS.items():
+        want = src[unit].get(field)
+        if key in info and want is not None and re.fullmatch(r"-?\d+", want) and info[key] != want:
+            out[key] = want
+    return out
+
+
+def sync_info(path: Path, sv: "core.Save", stamp: str):
+    """Подтягивает опыт и деньги в info.sii рядом с game.sii, чтобы список сохранений в игре показывал новые значения.
+    Возвращает число изменённых полей (0, если info.sii нет или менять нечего)."""
+    info_path = Path(path).parent / "info.sii"
+    if not info_path.exists():
+        return 0
+    text = read_text(info_path)
+    changes = info_updates(text, sv)
+    if not changes:
+        return 0
+    lines = text.split("\n")
+    unit = (parse_text(text).one("save_container") or {}).get("_name")
+    for key, value in changes.items():
+        set_field(lines, unit, key, value)
+    new_text = "\n".join(lines)
+    diffs = _diff_units(parse_text(text), parse_text(new_text))
+    if {d[1] for d in diffs} != set(changes) or {d[0] for d in diffs} != {unit}:
+        raise EditError(tr("Сверка info.sii не прошла, он не изменён."))
+    if stamp:  # без stamp (свежая копия слота) копия до правки не нужна
+        backup(info_path, stamp)
+    _atomic_write(info_path, new_text)
+    return len(changes)
+
+
+def apply_ops(path, ops, expected_mtime=None, copy_name=None, allow_running=False):
+    """ops: [('repair', unit, full), ('plate', unit, 'ABC 123'), ('skills', unit, {'long_dist': 3}),
+    ('money', bank_unit, 100000), ('xp', economy_unit, 50000), ...]. Возвращает отчёт.
+    copy_name: записать результат не в этот слот, а в новый слот-копию с таким именем (исходный не меняется,
+    игру можно не закрывать). allow_running: править этот слот при запущенной игре (слот-копия программы)."""
     path = Path(path)
-    if game_running():
-        raise EditError(tr("Игра запущена. Закройте Euro Truck Simulator 2 и повторите: пока игра открыта, "
-                           "она перезапишет изменения."))
+    if copy_name is None and not allow_running and game_running():
+        raise EditError(tr("Игра запущена. Закройте Euro Truck Simulator 2 (или American Truck Simulator) и повторите: "
+                           "пока игра открыта, она перезапишет изменения."))
     if expected_mtime is not None and path.stat().st_mtime != expected_mtime:
         raise EditError(tr("Сейв изменился после загрузки в программу. Обновите данные (F5) и повторите."))
 
@@ -255,7 +435,7 @@ def apply_ops(path, ops, expected_mtime=None):
         raise EditError(tr("Сверка не прошла: текстовая версия сейва расходится с исходным файлом, запись отменена."))
 
     lines = text.split("\n")
-    touched, expected = 0, set()
+    touched, expected, new_units, reshaped = 0, set(), set(), set()
     for op in ops:
         if op[0] == "repair":
             n = repair_unit(lines, op[1], full=op[2])
@@ -271,28 +451,56 @@ def apply_ops(path, ops, expected_mtime=None):
             upgrade_garage(lines, op[1], op[2], op[3])
             touched += 1
             expected.update(op[1:3])
+        elif op[0] == "money":  # ('money', bank_unit, новый_баланс)
+            touched += set_int_field(lines, op[1], "money_account", op[2], MONEY_MIN, MONEY_MAX, tr("Баланс"))
+            expected.add(op[1])
+        elif op[0] == "xp":  # ('xp', economy_unit, новый_опыт)
+            touched += set_int_field(lines, op[1], "experience_points", op[2], 0, XP_MAX, tr("Опыт"))
+            expected.add(op[1])
         elif op[0] == "skills":  # ('skills', unit, {поле: значение})
             raise_skills(lines, op[1], op[2])
             touched += 1
             expected.add(op[1])
+        elif op[0] == "fill":  # ('fill', план) — найм и покупка в свободные места гаражей
+            from tools import ets2_fill
+            units, created = ets2_fill.apply_fill(lines, original, op[1])
+            touched += 1
+            expected |= units
+            reshaped |= units
+            new_units |= created
         else:
             raise EditError(tr("Неизвестная операция {op}", op=op[0]))
     new_text = "\n".join(lines)
     result = parse_text(new_text)
-    diffs = _diff_units(original, result)
-    stray = [d for d in diffs if d[0] not in expected]
+    diffs = _diff_units(original, result, new_units, reshaped)
+    stray = [d for d in diffs if d[0] not in expected and d[0] not in new_units]
     if stray:
         raise EditError(tr("Сверка не прошла: изменилось лишнее ({what}), запись отменена.", what=stray[0]))
     if not diffs:
-        return {"changed_fields": 0, "units": 0, "backup": None}
+        return {"changed_fields": 0, "units": 0, "backup": None, "info": 0, "info_error": None, "path": path}
 
-    bak = backup(path)
-    tmp = path.with_name(path.name + ".ets2cm.tmp")
-    try:
-        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-            f.write(new_text)
-        os.replace(tmp, path)
-    except OSError as exc:
-        tmp.unlink(missing_ok=True)
-        raise EditError(tr("Не удалось записать файл ({exc}). Возможно, он занят другой программой.", exc=exc)) from None
-    return {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak}
+    if copy_name is not None:  # новый слот: исходный сейв остаётся как был, копия до правки не нужна
+        path = make_edited_copy(path, copy_name, (original.one("economy") or {}).get("game_time"))
+        _atomic_write(path, new_text)
+        report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": None,
+                  "info": 0, "info_error": None, "path": path, "copy": True}
+        try:
+            report["info"] = sync_info(path, result, None)
+        except (EditError, OSError) as exc:
+            report["info_error"] = str(exc)
+        return report
+
+    stamp = time.strftime('%Y%m%d_%H%M%S')
+    while (path.parent / BACKUP_DIR / f"{path.stem}_{stamp}{path.suffix}").exists():  # две правки в одну секунду
+        time.sleep(1)
+        stamp = time.strftime('%Y%m%d_%H%M%S')
+    bak = backup(path, stamp)
+    _atomic_write(path, new_text)
+    report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak, "info": 0, "info_error": None,
+              "path": path}
+    try:  # info.sii только для списка сохранений в игре: его ошибка не отменяет уже сделанную правку
+        report["info"] = sync_info(path, result, stamp)
+    except (EditError, OSError) as exc:
+        report["info_error"] = str(exc)
+    prune_backups(path)
+    return report
