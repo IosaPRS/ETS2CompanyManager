@@ -323,10 +323,8 @@
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Verfügbare Fahrer (Agentur und Reserve des Spiels). Markieren Sie, wen Sie einstellen:",
  "Свободных мест": "Freie Plätze",
  "Свободных мест нет": "Keine freien Plätze",
- "Своих грузовиков нет, копировать нечего: будут только водители.": "Keine eigenen Lkw zum Kopieren: nur Fahrer werden eingestellt.",
  "Сейв не прочитан": "Spielstand nicht gelesen",
  "Снять выбор": "Auswahl aufheben",
- "Ставить грузовик в пустые места": "Lkw auf leere Plätze stellen",
  "У прицепа-образца нет описания, заполнение отменено.": "Der Vorlage-Auflieger hat keine Definition, Auffüllen abgebrochen.",
  "агентство": "Agentur",
  "запас": "Reserve",
@@ -346,5 +344,15 @@
  "Дешёвые (низкий уровень)": "Günstigste (niedrige Stufe)",
  "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Wen markieren, so viele wie die markierten Garagen brauchen. Markierungen lassen sich von Hand ändern.",
  "Подобрать заново": "Neu auswählen",
- "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "Die Vorlage-Aufliegerkombination ist zu lang, Auffüllen abgebrochen."
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "Die Vorlage-Aufliegerkombination ist zu lang, Auffüllen abgebrochen.",
+ "Свои без водителя, остальным копия": "Eigene Lkw ohne Fahrer, Kopien für den Rest",
+ "Только свои без водителя": "Nur eigene Lkw ohne Fahrer",
+ "Только копия грузовика": "Nur Lkw-Kopien",
+ "Без грузовиков (только водители)": "Keine Lkw (nur Fahrer)",
+ "Свои без водителя: грузовики, которые стоят в гаражах на местах без водителя, переезжают к новым водителям бесплатно.": "Eigene Lkw ohne Fahrer: Lkw auf Garagenplätzen ohne Fahrer wechseln kostenlos zu den neuen Fahrern.",
+ "Грузовики новым водителям:": "Lkw für neue Fahrer:",
+ "Копия грузовика:": "Lkw-Kopie:",
+ "Своих грузовиков без водителя переедет к новым водителям: {n}.": "Eigene Lkw ohne Fahrer, die zu neuen Fahrern wechseln: {n}.",
+ "Своих грузовиков нет, копировать нечего.": "Keine eigenen Lkw zum Kopieren.",
+ "Грузовик {t} уже не свободен: обновите данные (F5).": "Lkw {t} ist nicht mehr frei: Daten aktualisieren (F5)."
 }

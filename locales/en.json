@@ -323,10 +323,8 @@
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Available drivers (agency and the game's reserve). Tick who to hire:",
  "Свободных мест": "Free slots",
  "Свободных мест нет": "No free slots",
- "Своих грузовиков нет, копировать нечего: будут только водители.": "You own no trucks to copy: only drivers will be hired.",
  "Сейв не прочитан": "Save not read",
  "Снять выбор": "Clear selection",
- "Ставить грузовик в пустые места": "Put a truck in empty slots",
  "У прицепа-образца нет описания, заполнение отменено.": "The template trailer has no definition, filling cancelled.",
  "агентство": "agency",
  "запас": "reserve",
@@ -346,5 +344,15 @@
  "Дешёвые (низкий уровень)": "Cheapest (low level)",
  "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Who to tick, as many as the ticked garages need. You can change the ticks by hand.",
  "Подобрать заново": "Pick again",
- "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "The template trailer combination is too long, filling cancelled."
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "The template trailer combination is too long, filling cancelled.",
+ "Свои без водителя, остальным копия": "Own trucks without a driver, copies for the rest",
+ "Только свои без водителя": "Only own trucks without a driver",
+ "Только копия грузовика": "Only truck copies",
+ "Без грузовиков (только водители)": "No trucks (drivers only)",
+ "Свои без водителя: грузовики, которые стоят в гаражах на местах без водителя, переезжают к новым водителям бесплатно.": "Own trucks without a driver: trucks standing in garage slots with no driver move to the new drivers for free.",
+ "Грузовики новым водителям:": "Trucks for new drivers:",
+ "Копия грузовика:": "Truck copy:",
+ "Своих грузовиков без водителя переедет к новым водителям: {n}.": "Own trucks without a driver moving to new drivers: {n}.",
+ "Своих грузовиков нет, копировать нечего.": "You own no trucks to copy.",
+ "Грузовик {t} уже не свободен: обновите данные (F5).": "Truck {t} is no longer free: refresh the data (F5)."
 }

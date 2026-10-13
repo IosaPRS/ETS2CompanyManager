@@ -948,9 +948,15 @@ class FillDialog(QDialog):
         none.clicked.connect(lambda: self._check_drivers(set()))
 
         # --- грузовик, прицеп, цены ---
-        self.truck_box = QCheckBox(tr("Ставить грузовик в пустые места"))
-        self.truck_box.setChecked(bool(self.trucks))
-        self.truck_box.setEnabled(bool(self.trucks))
+        self.truck_mode = QComboBox()
+        self.truck_mode.addItem(tr("Свои без водителя, остальным копия"), "free+copy")
+        self.truck_mode.addItem(tr("Только свои без водителя"), "free")
+        self.truck_mode.addItem(tr("Только копия грузовика"), "copy")
+        self.truck_mode.addItem(tr("Без грузовиков (только водители)"), "none")
+        self.truck_mode.setToolTip(tr("Свои без водителя: грузовики, которые стоят в гаражах на местах без водителя, "
+                                      "переезжают к новым водителям бесплатно."))
+        if not self.trucks:
+            self.truck_mode.setCurrentIndex(1)
         self.truck_combo = QComboBox()
         for t in self.trucks:
             self.truck_combo.addItem(f"{t['model']} · {t['plate']}", t["unit"])
@@ -961,18 +967,18 @@ class FillDialog(QDialog):
         self.hire_price = big_spin(0, 10_000_000, fill.HIRE_FEE)
         self.truck_price = big_spin(0, 10_000_000, 100_000)
         self.trailer_price = big_spin(0, 10_000_000, 30_000)
-        self.truck_box.toggled.connect(lambda *_: self._update())
-        for w in (self.truck_combo, self.trailer_combo):
+        for w in (self.truck_mode, self.truck_combo, self.trailer_combo):
             w.currentIndexChanged.connect(lambda *_: self._update())
         for w in (self.hire_price, self.truck_price, self.trailer_price):
             w.valueChanged.connect(lambda *_: self._update())
         form = QFormLayout()
         form.addRow(tr("Найм одного водителя, €:"), self.hire_price)
+        form.addRow(tr("Грузовики новым водителям:"), self.truck_mode)
         truck_row = QHBoxLayout()
         truck_row.addWidget(self.truck_combo, 1)
         truck_row.addWidget(QLabel(tr("цена, €:")))
         truck_row.addWidget(self.truck_price)
-        form.addRow(self.truck_box, truck_row)
+        form.addRow(tr("Копия грузовика:"), truck_row)
         trailer_row = QHBoxLayout()
         trailer_row.addWidget(self.trailer_combo, 1)
         trailer_row.addWidget(QLabel(tr("цена, €:")))
@@ -1037,7 +1043,8 @@ class FillDialog(QDialog):
 
     def build_plan(self):
         drivers = self._chosen_drivers()
-        trucks = self.truck_box.isChecked() and self.truck_combo.currentData() is not None
+        mode = self.truck_mode.currentData()
+        copy = mode in ("copy", "free+copy") and self.truck_combo.currentData() is not None
         trailer = self.trailer_combo.currentData()
         plan_slots = []
         for slots in self._chosen_garages():
@@ -1048,13 +1055,31 @@ class FillDialog(QDialog):
                         continue
                     new_driver = drivers.pop(0)
                 plan_slots.append({"garage": s["garage"], "slot": s["slot"], "driver": new_driver,
-                                   "truck": trucks and not s["has_truck"], "trailer": bool(trailer and new_driver)})
-        plan_slots = [s for s in plan_slots if s["driver"] or s["truck"]]
-        n_drv = sum(1 for s in plan_slots if s["driver"])
-        n_trk = sum(1 for s in plan_slots if s["truck"])
-        n_trl = sum(1 for s in plan_slots if s["trailer"])
+                                   "truck": False, "trailer": bool(trailer and new_driver)})
+        # свободные свои грузовики: стоят на местах без водителя, которым в этом плане водитель не достаётся
+        taken = {(p["garage"], p["slot"]) for p in plan_slots if p["driver"]}
+        spare = [s for s in self.slots if s["has_truck"] and not s["has_driver"] and (s["garage"], s["slot"]) not in taken]
+        spare.sort(key=lambda s: (s["garage"], s["slot"]))
+        has_truck = {(s["garage"], s["slot"]) for s in self.slots if s["has_truck"]}
+        n_move = 0
+        for p in plan_slots:
+            if (p["garage"], p["slot"]) in has_truck:
+                continue
+            same = [s for s in spare if s["garage"] == p["garage"]]  # сначала из того же гаража
+            if mode in ("free", "free+copy") and (same or spare):
+                src = (same or spare)[0]
+                spare.remove(src)
+                p["move_truck"] = {"truck": src["truck"], "garage": src["garage"], "slot": src["slot"]}
+                n_move += 1
+            elif copy:
+                p["truck"] = True
+        plan_slots = [p for p in plan_slots if p["driver"] or p["truck"] or p.get("move_truck")]
+        n_drv = sum(1 for p in plan_slots if p["driver"])
+        n_trk = sum(1 for p in plan_slots if p["truck"])
+        n_trl = sum(1 for p in plan_slots if p["trailer"])
         cost = n_drv * self.hire_price.value() + n_trk * self.truck_price.value() + n_trl * self.trailer_price.value()
-        return {"slots": plan_slots, "truck_template": self.truck_combo.currentData() if trucks else None,
+        self.n_move = n_move
+        return {"slots": plan_slots, "truck_template": self.truck_combo.currentData() if copy else None,
                 "trailer_template": trailer, "cost": cost}, (n_drv, n_trk, n_trl, len(drivers))
 
     def _update(self):
@@ -1063,8 +1088,12 @@ class FillDialog(QDialog):
                   d=n_drv, t=n_trk, p=n_trl, cost=core.money(plan["cost"]))
         if extra:
             text += " " + tr("Отмечено лишних водителей: {n}, для них нет свободных мест.", n=extra)
-        if not self.trucks:
-            text += " " + tr("Своих грузовиков нет, копировать нечего: будут только водители.")
+        if self.n_move:
+            text += " " + tr("Своих грузовиков без водителя переедет к новым водителям: {n}.", n=self.n_move)
+        if not self.trucks and self.truck_mode.currentData() in ("copy", "free+copy"):
+            text += " " + tr("Своих грузовиков нет, копировать нечего.")
+        self.truck_combo.setEnabled(self.truck_mode.currentData() in ("copy", "free+copy"))
+        self.truck_price.setEnabled(self.truck_combo.isEnabled())
         self.summary.setText(text)
         self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(bool(plan["slots"]))
 

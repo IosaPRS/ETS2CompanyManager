@@ -323,10 +323,8 @@
  "Свободные водители (агентство и запас игры). Отметьте, кого нанять:": "Chauffeurs disponibles (agence et réserve du jeu). Cochez ceux à embaucher :",
  "Свободных мест": "Places libres",
  "Свободных мест нет": "Aucune place libre",
- "Своих грузовиков нет, копировать нечего: будут только водители.": "Aucun camion à copier : seuls des chauffeurs seront embauchés.",
  "Сейв не прочитан": "Sauvegarde non lue",
  "Снять выбор": "Tout décocher",
- "Ставить грузовик в пустые места": "Mettre un camion aux places vides",
  "У прицепа-образца нет описания, заполнение отменено.": "La remorque modèle n'a pas de définition, remplissage annulé.",
  "агентство": "agence",
  "запас": "réserve",
@@ -346,5 +344,15 @@
  "Дешёвые (низкий уровень)": "Moins chers (niveau bas)",
  "Кого отметить, сколько нужно для отмеченных гаражей. Отметки можно поправить вручную.": "Qui cocher, autant que les garages cochés en ont besoin. Vous pouvez modifier les coches à la main.",
  "Подобрать заново": "Choisir à nouveau",
- "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "L'attelage de la remorque modèle est trop long, remplissage annulé."
+ "Сцепка прицепов-образца слишком длинная, заполнение отменено.": "L'attelage de la remorque modèle est trop long, remplissage annulé.",
+ "Свои без водителя, остальным копия": "Camions sans chauffeur, copies pour le reste",
+ "Только свои без водителя": "Seulement les camions sans chauffeur",
+ "Только копия грузовика": "Seulement des copies de camion",
+ "Без грузовиков (только водители)": "Pas de camions (chauffeurs seulement)",
+ "Свои без водителя: грузовики, которые стоят в гаражах на местах без водителя, переезжают к новым водителям бесплатно.": "Camions sans chauffeur : les camions garés sur des places sans chauffeur passent gratuitement aux nouveaux chauffeurs.",
+ "Грузовики новым водителям:": "Camions pour les nouveaux chauffeurs :",
+ "Копия грузовика:": "Copie de camion :",
+ "Своих грузовиков без водителя переедет к новым водителям: {n}.": "Camions sans chauffeur attribués aux nouveaux chauffeurs : {n}.",
+ "Своих грузовиков нет, копировать нечего.": "Aucun camion à copier.",
+ "Грузовик {t} уже не свободен: обновите данные (F5).": "Le camion {t} n'est plus libre : actualisez les données (F5)."
 }

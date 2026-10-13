@@ -182,7 +182,8 @@ def free_slots(sv):
             v = vehicles[i] if i < len(vehicles) else None
             if is_empty(d) or is_empty(v):
                 out.append({"garage": g["_name"], "city": core.city(g["_name"]), "slot": i,
-                            "has_driver": not is_empty(d), "has_truck": not is_empty(v)})
+                            "has_driver": not is_empty(d), "has_truck": not is_empty(v),
+                            "truck": None if is_empty(v) else v})
     return out
 
 
@@ -362,7 +363,18 @@ def apply_fill(lines, sv, plan):
             else:
                 b.remove(eco["_name"], "driver_pool", did)
             touched.add(_add_event(b, sv, eco, game_time + HIRE_READY_MIN, did, 3, new_units))
-        if s.get("truck"):
+        if s.get("move_truck"):  # свой грузовик без водителя переезжает на место нового водителя
+            mv = s["move_truck"]
+            if not is_empty(b.array(gid, "vehicles")[slot]):
+                raise EditError(tr("Место {n} в гараже {g} уже занято: обновите данные (F5).", n=slot + 1, g=gid))
+            src = b.array(mv["garage"], "vehicles")
+            if mv["slot"] >= len(src) or src[mv["slot"]] != mv["truck"] \
+                    or not is_empty(b.array(mv["garage"], "drivers")[mv["slot"]]):
+                raise EditError(tr("Грузовик {t} уже не свободен: обновите данные (F5).", t=mv["truck"]))
+            b.set(mv["garage"], "vehicles", "null", idx=mv["slot"])
+            b.set(gid, "vehicles", mv["truck"], idx=slot)
+            touched.add(mv["garage"])
+        elif s.get("truck"):
             if not plan.get("truck_template"):
                 raise EditError(tr("Не выбран грузовик-образец."))
             if not is_empty(b.array(gid, "vehicles")[slot]):
