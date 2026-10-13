@@ -19,7 +19,7 @@ from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServic
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
     QLabel, QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-    QPushButton, QSpinBox, QTableView, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QPushButton, QSpinBox, QTableView, QToolButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tools import ets2_edit as edit
@@ -535,8 +535,18 @@ class SkillsPage(QWidget):
             self.applyRequested.emit(self.driver["id"], dict(self.pending))
 
 
+class Tile(QFrame):
+    """Плитка сводки; двойной клик сообщает о себе (плитка «Деньги» открывает правку баланса)."""
+    doubleClicked = Signal()
+
+    def mouseDoubleClickEvent(self, event):
+        self.doubleClicked.emit()
+        super().mouseDoubleClickEvent(event)
+
+
 class StatBar(QWidget):
     """Плитки сводки по компании над вкладками."""
+    editMoney = Signal()
 
     def __init__(self):
         super().__init__()
@@ -547,8 +557,8 @@ class StatBar(QWidget):
         self.hint.setStyleSheet(f"color: {theme.c('muted')}; padding: 10px;")
         self.lay.addWidget(self.hint)
 
-    def _tile(self, label, value, accent=False):
-        tile = QFrame()
+    def _tile(self, label, value, accent=False, editable=False):
+        tile = Tile()
         tile.setObjectName("tile")
         box = QVBoxLayout(tile)
         box.setContentsMargins(14, 8, 14, 8)
@@ -558,7 +568,26 @@ class StatBar(QWidget):
         val = QLabel(value)
         val.setObjectName("tileValue")
         val.setProperty("accent", "true" if accent else "false")
-        box.addWidget(cap)
+        if editable:
+            tip = tr("Изменить баланс и опыт (или двойной клик по плитке)")
+            tile.setToolTip(tip)
+            tile.setCursor(Qt.CursorShape.PointingHandCursor)
+            tile.doubleClicked.connect(self.editMoney.emit)
+            wrench = QToolButton()
+            wrench.setObjectName("tileEdit")
+            wrench.setText("🔧")
+            wrench.setToolTip(tip)
+            wrench.setCursor(Qt.CursorShape.PointingHandCursor)
+            wrench.setAutoRaise(True)
+            wrench.clicked.connect(self.editMoney.emit)
+            top = QHBoxLayout()
+            top.setContentsMargins(0, 0, 0, 0)
+            top.addWidget(cap)
+            top.addStretch(1)
+            top.addWidget(wrench)
+            box.addLayout(top)
+        else:
+            box.addWidget(cap)
         box.addWidget(val)
         return tile
 
@@ -570,9 +599,10 @@ class StatBar(QWidget):
         busy = sum(1 for d in c["drivers"] if d["job"])
         tiles = []
         if c["money"] is not None:
-            tiles.append((tr("Деньги"), view.safe_money(c["money"]), True))
+            tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, True))
         tiles += [
             (tr("Штаб"), c["hq"] or "-", False),
+            (tr("Опыт"), core.money(c["xp"]), False),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
             (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
@@ -831,6 +861,7 @@ class MainWindow(QMainWindow):
         self.mtime = 0.0
 
         self.header = StatBar()
+        self.header.editMoney.connect(self.edit_balance)
         self.tabs = QTabWidget()
         self.pages = {}
         for key, title, headers, _ in self.TABS:

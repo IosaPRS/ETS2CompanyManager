@@ -16,7 +16,7 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern und Fahrerf�
 - **Reiter „Fähigkeiten“**: Für jeden Fahrer wählst du wie im Spiel, was verbessert wird (Ferntransport, wertvolle
   und zerbrechliche Fracht, Just-in-time, ökologisches Fahren und die sechs ADR-Klassen).
 - **Spielstand ändern**: Reparieren (alle oder Auswahl), Betanken, Kennzeichen ändern, kleine Garage auf groß erweitern, Fähigkeiten erhöhen,
-  Firmenkontostand und Spielererfahrung ändern (*Bearbeiten → Kontostand und Erfahrung*).
+  Firmenkontostand und Spielererfahrung ändern (Schraubenschlüssel oder Doppelklick auf die Kachel *Geld*, oder *Bearbeiten → Kontostand und Erfahrung*).
 - **Profile**: beliebiges Profil und beliebigen Spielstand-Slot wählen (*Datei → Profil und Spielstand wählen*), auch Steam-Cloud-Profile.
 - Update-Prüfung beim Start (in *Einstellungen* abschaltbar), Oberflächenskalierung, das Fenster öffnet sich dort, wo du es geschlossen hast.
 - Dunkles und helles Design, Oberfläche auf Englisch, Russisch, Deutsch und Französisch, Sortieren und Filtern in jeder Tabelle.

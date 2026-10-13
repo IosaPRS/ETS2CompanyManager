@@ -287,5 +287,6 @@
  "Химическая цистерна": "Chemical tanker",
  "Цистерна": "Tanker",
  "Штора": "Curtainsider",
- "сохранений: {n}": "saves: {n}"
+ "сохранений: {n}": "saves: {n}",
+ "Изменить баланс и опыт (или двойной клик по плитке)": "Change balance and XP (or double-click the tile)"
 }
