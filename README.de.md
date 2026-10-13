@@ -41,7 +41,8 @@ Eine Konsolenübersicht gibt es auch: `python ets2_manager.py "<Pfad zu game.sii
 
 - Schließe zuerst das Spiel: Solange es läuft, überschreibt es die Änderungen, und das Programm verweigert das Schreiben.
 - Vor jeder Änderung landet eine Kopie im Ordner `ets2cm_backups` neben `game.sii`.
-  *Datei → Spielstand aus Sicherung wiederherstellen* spielt sie zurück.
+  *Datei → Letzte Änderung rückgängig* (Strg+Z) oder *Datei → Spielstand aus Sicherung wiederherstellen* spielt sie zurück. Die letzten 20 Kopien bleiben erhalten.
+- Geld und EP werden auch in `info.sii` aktualisiert, damit die Spielstandliste des Spiels die neuen Werte zeigt.
 - Das Programm ändert nur die nötigen Felder, vergleicht das Ergebnis mit dem Original und schreibt nichts,
   wenn sich noch etwas anderes unterscheidet.
 - Probiere es zuerst an einer Kopie des Spielstand-Slots aus.

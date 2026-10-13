@@ -1160,6 +1160,7 @@ class MainWindow(QMainWindow):
         self.watch_action.setChecked(self.settings.value("watch", True, type=bool))
         self.watch_action.toggled.connect(lambda on: self.settings.setValue("watch", on))
         menu.addSeparator()
+        self._action(menu, tr("Отменить последнюю правку"), self.undo_last, "Ctrl+Z")
         self._action(menu, tr("Восстановить сейв из резервной копии…"), self.restore_dialog)
         menu.addSeparator()
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
@@ -1503,8 +1504,11 @@ class MainWindow(QMainWindow):
             return
         self.load(self.save_path)
         if report["backup"]:
+            note = ""
+            if report.get("info_error"):
+                note = "\n" + tr("info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}", err=report["info_error"])
             QMessageBox.information(self, tr("Готово"), done_text + "\n" + tr("Изменено полей: {n}.", n=report['changed_fields']) + "\n"
-                                    + tr("Копия до правки: {path}", path=report['backup']))
+                                    + tr("Копия до правки: {path}", path=report['backup']) + note)
         else:
             QMessageBox.information(self, tr("Без изменений"), tr("Менять было нечего: значения уже такие."))
 
@@ -1699,6 +1703,30 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, tr("Не удалось"), str(exc))
             return
         self.load(self.save_path)
+
+    def undo_last(self):
+        if not self._need_save():
+            return
+        backups = edit.list_backups(self.save_path)
+        if not backups:
+            QMessageBox.information(self, tr("Нет копий"), tr("Резервных копий этого сейва пока нет."))
+            return
+        last = backups[0]
+        made = edit.backup_time(last)
+        text = tr("Вернуть сейв к копии от {when}, сделанной перед последней правкой?",
+                  when=datetime.fromtimestamp(made).strftime("%d.%m %H:%M:%S") if made else last.name)
+        if made and Path(self.save_path).stat().st_mtime - made > 120:
+            text += "\n\n" + tr("Внимание: сейв менялся после этой правки (похоже, игра сохранялась). "
+                                 "Всё, что было после, пропадёт.")
+        if QMessageBox.question(self, tr("Отменить правку?"), text) != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            edit.undo_last(self.save_path)
+        except (edit.EditError, OSError) as exc:
+            QMessageBox.warning(self, tr("Не удалось"), str(exc))
+            return
+        self.load(self.save_path)
+        QMessageBox.information(self, tr("Готово"), tr("Последняя правка отменена."))
 
     def rename_driver(self, driver_id, name):
         view.save_nickname(driver_id, name)

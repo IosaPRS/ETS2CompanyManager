@@ -41,7 +41,8 @@ A command-line summary is also available: `python ets2_manager.py "<path to game
 
 - Close the game first. While it is running it would overwrite the changes, and the program refuses to write.
 - Before every change a copy of the save goes to the `ets2cm_backups` folder next to `game.sii`.
-  *File → Restore save from backup* puts it back.
+  *File → Undo last edit* (Ctrl+Z) or *File → Restore save from backup* puts it back. The last 20 copies are kept.
+- Money and XP are also updated in `info.sii`, so the game's save list shows the new values.
 - The program changes only the fields it needs, then compares the result with the original and writes nothing
   if anything else would differ.
 - Try it on a copy of a save slot first.

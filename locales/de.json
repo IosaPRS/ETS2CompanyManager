@@ -335,5 +335,12 @@
  "цена, €:": "Preis, €:",
  "Без рейса": "Kein Auftrag",
  "без водителя": "ohne Fahrer",
- "Гараж: {city}": "Garage: {city}"
+ "Гараж: {city}": "Garage: {city}",
+ "Отменить последнюю правку": "Letzte Änderung rückgängig",
+ "info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}": "info.sii (EP und Geld in der Spielstandliste) wurde nicht aktualisiert: {err}",
+ "Вернуть сейв к копии от {when}, сделанной перед последней правкой?": "Spielstand auf die Kopie vom {when} zurücksetzen, die vor der letzten Änderung erstellt wurde?",
+ "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Achtung: Der Spielstand wurde nach dieser Änderung verändert (das Spiel hat wohl gespeichert). Alles danach geht verloren.",
+ "Отменить правку?": "Änderung rückgängig machen?",
+ "Последняя правка отменена.": "Die letzte Änderung wurde rückgängig gemacht.",
+ "Сверка info.sii не прошла, он не изменён.": "Prüfung von info.sii fehlgeschlagen; sie wurde nicht geändert."
 }

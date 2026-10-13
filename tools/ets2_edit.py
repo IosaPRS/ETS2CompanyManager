@@ -240,23 +240,127 @@ def _diff_units(a: "core.Save", b: "core.Save", new_units=frozenset(), reshaped=
     return diffs
 
 
-def backup(path: Path) -> Path:
+BACKUP_KEEP = 20  # сколько последних копий game.sii хранить (вместе с парными info.sii)
+INFO_FIELDS = {"info_players_experience": ("economy", "experience_points"), "info_money_account": ("bank", "money_account")}
+
+
+def backup(path: Path, stamp=None) -> Path:
     folder = Path(path).parent / BACKUP_DIR
     folder.mkdir(exist_ok=True)
-    dst = folder / f"{Path(path).stem}_{time.strftime('%Y%m%d_%H%M%S')}{Path(path).suffix}"
+    stamp = stamp or time.strftime('%Y%m%d_%H%M%S')
+    dst = folder / f"{Path(path).stem}_{stamp}{Path(path).suffix}"
     shutil.copy2(path, dst)
     return dst
 
 
+def _stamp_of(backup_file: Path) -> str:
+    m = re.search(r"(\d{8}_\d{6})$", Path(backup_file).stem)
+    return m[1] if m else ""
+
+
+def paired_info(backup_file: Path):
+    """Копия info.sii, сделанная вместе с этой копией game.sii (или None)."""
+    p = Path(backup_file).parent / f"info_{_stamp_of(backup_file)}.sii"
+    return p if p.exists() else None
+
+
 def list_backups(path: Path):
+    """Копии game.sii (без копий info.sii), сверху самая свежая."""
     folder = Path(path).parent / BACKUP_DIR
-    return sorted(folder.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True) if folder.exists() else []
+    if not folder.exists():
+        return []
+    files = folder.glob(f"{Path(path).stem}_*{Path(path).suffix}")
+    return sorted(files, key=lambda p: (_stamp_of(p), p.stat().st_mtime), reverse=True)
+
+
+def prune_backups(path: Path, keep=BACKUP_KEEP):
+    """Удаляет старые копии сверх keep (и их парные info.sii). Возвращает число удалённых копий."""
+    old = list_backups(path)[keep:]
+    for b in old:
+        info = paired_info(b)
+        b.unlink(missing_ok=True)
+        if info:
+            info.unlink(missing_ok=True)
+    return len(old)
 
 
 def restore_backup(path: Path, backup_file: Path):
     if game_running():
         raise EditError(tr("Закройте игру перед восстановлением сейва."))
     shutil.copy2(backup_file, path)
+    info = paired_info(backup_file)
+    if info and (Path(path).parent / "info.sii").exists():
+        shutil.copy2(info, Path(path).parent / "info.sii")
+
+
+def backup_time(backup_file: Path):
+    """Когда сделана копия (по имени файла), в секундах epoch; None, если имя без отметки времени."""
+    try:
+        return time.mktime(time.strptime(_stamp_of(backup_file), "%Y%m%d_%H%M%S"))
+    except ValueError:
+        return None
+
+
+def undo_last(path: Path):
+    """Отмена последней правки: самая свежая копия становится сейвом и удаляется из списка копий
+    (следующая отмена откатит ещё на шаг). Возвращает восстановленную копию."""
+    backups = list_backups(path)
+    if not backups:
+        raise EditError(tr("Резервных копий этого сейва пока нет."))
+    last = backups[0]
+    restore_backup(path, last)
+    info = paired_info(last)
+    last.unlink(missing_ok=True)
+    if info:
+        info.unlink(missing_ok=True)
+    return last
+
+
+def _atomic_write(path: Path, text: str):
+    tmp = path.with_name(path.name + ".ets2cm.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as exc:
+        tmp.unlink(missing_ok=True)
+        raise EditError(tr("Не удалось записать файл ({exc}). Возможно, он занят другой программой.", exc=exc)) from None
+
+
+def info_updates(info_text: str, sv: "core.Save") -> dict:
+    """Поля info.sii (опыт и деньги в списке сохранений игры), которые расходятся с game.sii: {поле: новое значение}."""
+    eco = sv.one("economy") or {}
+    src = {"economy": eco, "bank": sv.ref(eco.get("bank")) or {}}
+    info = parse_text(info_text).one("save_container") or {}
+    out = {}
+    for key, (unit, field) in INFO_FIELDS.items():
+        want = src[unit].get(field)
+        if key in info and want is not None and re.fullmatch(r"-?\d+", want) and info[key] != want:
+            out[key] = want
+    return out
+
+
+def sync_info(path: Path, sv: "core.Save", stamp: str):
+    """Подтягивает опыт и деньги в info.sii рядом с game.sii, чтобы список сохранений в игре показывал новые значения.
+    Возвращает число изменённых полей (0, если info.sii нет или менять нечего)."""
+    info_path = Path(path).parent / "info.sii"
+    if not info_path.exists():
+        return 0
+    text = read_text(info_path)
+    changes = info_updates(text, sv)
+    if not changes:
+        return 0
+    lines = text.split("\n")
+    unit = (parse_text(text).one("save_container") or {}).get("_name")
+    for key, value in changes.items():
+        set_field(lines, unit, key, value)
+    new_text = "\n".join(lines)
+    diffs = _diff_units(parse_text(text), parse_text(new_text))
+    if {d[1] for d in diffs} != set(changes) or {d[0] for d in diffs} != {unit}:
+        raise EditError(tr("Сверка info.sii не прошла, он не изменён."))
+    backup(info_path, stamp)
+    _atomic_write(info_path, new_text)
+    return len(changes)
 
 
 def apply_ops(path, ops, expected_mtime=None):
@@ -318,15 +422,18 @@ def apply_ops(path, ops, expected_mtime=None):
     if stray:
         raise EditError(tr("Сверка не прошла: изменилось лишнее ({what}), запись отменена.", what=stray[0]))
     if not diffs:
-        return {"changed_fields": 0, "units": 0, "backup": None}
+        return {"changed_fields": 0, "units": 0, "backup": None, "info": 0, "info_error": None}
 
-    bak = backup(path)
-    tmp = path.with_name(path.name + ".ets2cm.tmp")
-    try:
-        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-            f.write(new_text)
-        os.replace(tmp, path)
-    except OSError as exc:
-        tmp.unlink(missing_ok=True)
-        raise EditError(tr("Не удалось записать файл ({exc}). Возможно, он занят другой программой.", exc=exc)) from None
-    return {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak}
+    stamp = time.strftime('%Y%m%d_%H%M%S')
+    while (path.parent / BACKUP_DIR / f"{path.stem}_{stamp}{path.suffix}").exists():  # две правки в одну секунду
+        time.sleep(1)
+        stamp = time.strftime('%Y%m%d_%H%M%S')
+    bak = backup(path, stamp)
+    _atomic_write(path, new_text)
+    report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak, "info": 0, "info_error": None}
+    try:  # info.sii только для списка сохранений в игре: его ошибка не отменяет уже сделанную правку
+        report["info"] = sync_info(path, result, stamp)
+    except (EditError, OSError) as exc:
+        report["info_error"] = str(exc)
+    prune_backups(path)
+    return report

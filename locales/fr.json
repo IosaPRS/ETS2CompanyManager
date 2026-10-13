@@ -335,5 +335,12 @@
  "цена, €:": "prix, € :",
  "Без рейса": "Pas de mission",
  "без водителя": "sans chauffeur",
- "Гараж: {city}": "Garage : {city}"
+ "Гараж: {city}": "Garage : {city}",
+ "Отменить последнюю правку": "Annuler la dernière modification",
+ "info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}": "info.sii (XP et argent dans la liste des sauvegardes) n'a pas été mis à jour : {err}",
+ "Вернуть сейв к копии от {when}, сделанной перед последней правкой?": "Restaurer la sauvegarde à la copie du {when}, faite avant la dernière modification ?",
+ "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Attention : la sauvegarde a changé après cette modification (le jeu semble avoir sauvegardé). Tout ce qui a suivi sera perdu.",
+ "Отменить правку?": "Annuler la modification ?",
+ "Последняя правка отменена.": "La dernière modification a été annulée.",
+ "Сверка info.sii не прошла, он не изменён.": "Vérification d'info.sii échouée ; il n'a pas été modifié."
 }

@@ -335,5 +335,12 @@
  "цена, €:": "price, €:",
  "Без рейса": "No job",
  "без водителя": "no driver",
- "Гараж: {city}": "Garage: {city}"
+ "Гараж: {city}": "Garage: {city}",
+ "Отменить последнюю правку": "Undo last edit",
+ "info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}": "info.sii (XP and money in the game's save list) was not updated: {err}",
+ "Вернуть сейв к копии от {when}, сделанной перед последней правкой?": "Restore the save to the copy from {when}, made before the last edit?",
+ "Внимание: сейв менялся после этой правки (похоже, игра сохранялась). Всё, что было после, пропадёт.": "Warning: the save changed after this edit (the game seems to have saved). Everything since then will be lost.",
+ "Отменить правку?": "Undo the edit?",
+ "Последняя правка отменена.": "The last edit was undone.",
+ "Сверка info.sii не прошла, он не изменён.": "info.sii check failed; it was not changed."
 }
