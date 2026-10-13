@@ -15,7 +15,10 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern und Fahrerf�
 - **Aufträge**: wer was wohin fährt, Entfernung, Fahrtzeit, Fährkosten.
 - **Reiter „Fähigkeiten“**: Für jeden Fahrer wählst du wie im Spiel, was verbessert wird (Ferntransport, wertvolle
   und zerbrechliche Fracht, Just-in-time, ökologisches Fahren und die sechs ADR-Klassen).
-- **Spielstand ändern**: Reparieren (alle oder Auswahl), Betanken, Kennzeichen ändern, kleine Garage auf groß erweitern, Fähigkeiten erhöhen.
+- **Spielstand ändern**: Reparieren (alle oder Auswahl), Betanken, Kennzeichen ändern, kleine Garage auf groß erweitern, Fähigkeiten erhöhen,
+  Firmenkontostand und Spielererfahrung ändern (*Bearbeiten → Kontostand und Erfahrung*).
+- **Profile**: beliebiges Profil und beliebigen Spielstand-Slot wählen (*Datei → Profil und Spielstand wählen*), auch Steam-Cloud-Profile.
+- Update-Prüfung beim Start (in *Einstellungen* abschaltbar), Oberflächenskalierung, das Fenster öffnet sich dort, wo du es geschlossen hast.
 - Dunkles und helles Design, Oberfläche auf Englisch, Russisch, Deutsch und Französisch, Sortieren und Filtern in jeder Tabelle.
 - Beobachtet den Spielstand: Schreibt das Spiel einen neuen Autosave, aktualisieren sich die Tabellen von selbst.
 
@@ -57,6 +60,8 @@ Details in `locales/README.md`.
 - Die Garagenproduktivität wird aus dem Gewinn der letzten 7 Tage und dem Garagenpreis berechnet
   (150.000 € klein, 300.000 € groß); sie stimmte mit den Werten im Spiel überein.
 - Die Erweiterungskosten gibst du selbst ein: den Preis, den das Spiel anzeigt.
+- Wie das Spiel die Spielerstufe nach einer Änderung der Erfahrung neu berechnet, wurde an einem echten Spielstand noch nicht geprüft.
+- Spielstände von American Truck Simulator lassen sich ebenfalls öffnen, aber Lkw-Namen, Logos und Fahrernamen sind für ETS2 gemacht.
 - Fahrernamen stammen aus der Tabelle `requirements/driver_names.json` (der Spielstand enthält keine); jeden Fahrer kannst du umbenennen.
 
 ## Hinweise

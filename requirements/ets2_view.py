@@ -304,14 +304,99 @@ def driver_card_html(d):
 
 # ---------- сейвы и имена ----------
 
-def find_latest_save():
-    """Самый свежий game.sii среди всех профилей и сохранений."""
+GAMES = (("ets2", "Euro Truck Simulator 2"), ("ats", "American Truck Simulator"))
+PROFILE_DIRS = ("profiles", "steam_profiles")
+
+
+def documents_dirs():
+    """Возможные папки «Документы»: обычная, в OneDrive и из USERPROFILE (без повторов)."""
+    import os
     home = Path.home()
-    roots = [home / "Documents", home / "OneDrive" / "Documents"]
-    found = []
-    for root in roots:
-        found += list((root / "Euro Truck Simulator 2" / "profiles").glob("*/save/*/game.sii"))
-    return max(found, key=lambda p: p.stat().st_mtime) if found else None
+    cands = [home / "Documents", home / "OneDrive" / "Documents", home / "OneDrive" / "Документы"]
+    if os.environ.get("USERPROFILE"):
+        cands.append(Path(os.environ["USERPROFILE"]) / "Documents")
+    out, seen = [], set()
+    for p in cands:
+        key = str(p).lower()
+        if key not in seen and p.is_dir():
+            seen.add(key)
+            out.append(p)
+    return out
+
+
+def _mtime(p):
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def slot_title(slot_dir: Path) -> str:
+    """Название слота: поле name из info.sii; если его нет, по имени папки (autosave, quicksave, 1...)."""
+    info = slot_dir / "info.sii"
+    name = ""
+    if info.exists():
+        try:
+            sv = core.Save(info)
+            unit = sv.one("save_container") or next(iter(sv.units.values()), {})
+            name = str(unit.get("name") or "").strip()
+        except (SystemExit, Exception):  # битый или нечитаемый info.sii не мешает выбору
+            name = ""
+    if name and not name.startswith("@@"):
+        return name
+    folder = slot_dir.name
+    if folder == "autosave" or folder.startswith("autosave"):
+        return tr("Автосохранение")
+    if folder == "quicksave":
+        return tr("Быстрое сохранение")
+    if folder.isdigit():
+        return tr("Слот {n}", n=folder)
+    return folder
+
+
+def find_profiles(read_titles=True):
+    """Все профили ETS2 и ATS: [{'game', 'game_name', 'name', 'dir', 'saves': [{'title', 'slot', 'path', 'mtime'}], 'mtime'}].
+
+    Сортировка: сначала профили со свежими сейвами. read_titles=False не читает info.sii (быстрее).
+    """
+    profiles = []
+    for docs in documents_dirs():
+        for code, game in GAMES:
+            for sub in PROFILE_DIRS:
+                root = docs / game / sub
+                if not root.is_dir():
+                    continue
+                for pdir in sorted(x for x in root.iterdir() if x.is_dir()):
+                    saves = []
+                    for gp in (pdir / "save").glob("*/game.sii"):
+                        saves.append({"slot": gp.parent.name, "path": gp, "mtime": _mtime(gp),
+                                      "title": slot_title(gp.parent) if read_titles else gp.parent.name})
+                    if not saves:
+                        continue
+                    saves.sort(key=lambda x: -x["mtime"])
+                    profiles.append({"game": code, "game_name": game, "dir": pdir, "saves": saves,
+                                     "name": core.profile_name_from_path(pdir) or pdir.name,
+                                     "steam": sub == "steam_profiles", "mtime": saves[0]["mtime"]})
+    profiles.sort(key=lambda x: -x["mtime"])
+    return profiles
+
+
+def profile_dir_of(save_path):
+    """.../profiles/<hex>/save/<слот>/game.sii -> папка профиля или None."""
+    p = Path(save_path)
+    if p.parent.parent.name == "save":
+        return p.parent.parent.parent
+    return None
+
+
+def find_latest_save(profile_dir=None):
+    """Самый свежий game.sii: в указанном профиле или среди всех профилей ETS2 и ATS."""
+    if profile_dir:
+        found = list(Path(profile_dir).glob("save/*/game.sii"))
+        if found:
+            return max(found, key=_mtime)
+    profiles = find_profiles(read_titles=False)
+    return profiles[0]["saves"][0]["path"] if profiles else None
 
 
 def save_nickname(driver_id, name):

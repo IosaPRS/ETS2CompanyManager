@@ -470,6 +470,7 @@ def build_company(sv: Save) -> dict:
     return {
         "hq": (pl.get("hq_city") or "").capitalize(),
         "money": bank.get("money_account"),
+        "economy_unit": eco.get("_name"),
         "bank_unit": eco.get("bank"),
         "game_days": to_int(eco.get("game_time")) / 1440,
         "xp": to_int(eco.get("experience_points")),

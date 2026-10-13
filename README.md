@@ -15,7 +15,10 @@ upgrade garages and level up driver skills in the save.
 - **Jobs**: who is hauling what, from where to where, distance, time on the road, ferry cost.
 - **Skills tab**: pick what to level up for every driver, like in the game (long distance, high value cargo,
   fragile cargo, just-in-time, ecodriving and the six ADR classes).
-- **Save editing**: repair (all or selected), refuel, change plates, upgrade a small garage to a large one, raise skills.
+- **Save editing**: repair (all or selected), refuel, change plates, upgrade a small garage to a large one, raise skills,
+  change the company balance and player XP (*Edit → Balance and XP*).
+- **Profiles**: pick any profile and save slot (*File → Choose profile and save*), including Steam Cloud profiles.
+- Update check at startup (can be turned off in *Settings*), interface scale, the window reopens where you left it.
 - Dark and light theme, English / Russian / German / French interface, sorting and filtering in every table.
 - Follows the save: when the game writes a new autosave the tables refresh by themselves.
 
@@ -57,6 +60,8 @@ See `locales/README.md`.
 - Garage productivity is calculated from the last 7 days of garage profit and the garage price
   (€150,000 small, €300,000 large); it matched the values seen in the game.
 - The upgrade cost is entered by hand: type the price the game shows.
+- How the game recalculates the player level after an XP change has not been checked on a real save yet.
+- American Truck Simulator saves open too, but truck names, logos and driver names are made for ETS2.
 - Driver names come from a table in `requirements/driver_names.json` (the save has none); you can rename any driver.
 
 ## Credits

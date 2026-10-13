@@ -5,19 +5,21 @@
 Запуск:     python ets2_gui.py
 Рядом с ets2_gui.py должны лежать ets2_manager.py и папки requirements, tools, assets, locales.
 """
+import os
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from PySide6.QtCore import QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, Signal
-from PySide6.QtGui import (QAction, QBrush, QColor, QIcon, QPainter, QPalette, QPixmap, QStandardItem,
-                           QStandardItemModel)
+from PySide6.QtCore import QObject, QRect, QSettings, QSize, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServices, QGuiApplication, QIcon, QPainter,
+                           QPalette, QPixmap, QStandardItem, QStandardItemModel)
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QDialog, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
-    QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableView,
-    QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QAbstractItemView, QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
+    QLabel, QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
+    QPushButton, QSpinBox, QTableView, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tools import ets2_edit as edit
@@ -26,11 +28,19 @@ from requirements.paths import data_path
 from requirements.ets2_i18n import available_langs, get_lang, set_lang, tr
 import ets2_manager as core
 from requirements import ets2_view as view
+from requirements import updates
+from requirements.app_info import APP_NAME, VERSION
 
 ASSETS_ROOT = data_path("assets")
 ASSETS = ASSETS_ROOT / "brands"
 ICON_H = 22
 _icons = {}
+SETTINGS_ORG, SETTINGS_APP = "ets2-company-manager", "gui"
+UI_SCALES = (100, 110, 125, 150, 175)  # масштаб интерфейса поверх масштаба Windows, %
+
+
+def app_settings():
+    return QSettings(SETTINGS_ORG, SETTINGS_APP)
 
 BG_FILES = {"green": "on_duty", "turquoise": "returning", "blue": "parked", "red": "idle"}
 GRAY_BG = (128, 128, 128)
@@ -633,6 +643,169 @@ class DriverDialog(QDialog):
         self.accept()
 
 
+class ProfileDialog(QDialog):
+    """Выбор профиля (ETS2 и ATS) и слота сохранения."""
+
+    def __init__(self, parent, current=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("Выбор профиля и сохранения"))
+        self.resize(760, 460)
+        self.chosen = None
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            self.profiles = view.find_profiles()
+        finally:
+            QApplication.restoreOverrideCursor()
+        cur_dir = view.profile_dir_of(current) if current else None
+
+        self.plist = QListWidget()
+        self.slist = QListWidget()
+        self.plist.currentRowChanged.connect(self._fill_slots)
+        self.slist.itemDoubleClicked.connect(lambda _it: self._accept())
+        keep = 0
+        for i, p in enumerate(self.profiles):
+            game = "ETS2" if p["game"] == "ets2" else "ATS"
+            when = datetime.fromtimestamp(p["mtime"]).strftime("%d.%m.%Y %H:%M")
+            it = QListWidgetItem(f"{p['name']}\n{game} · " + tr("сохранений: {n}", n=len(p["saves"])) + f" · {when}")
+            it.setToolTip(str(p["dir"]))
+            self.plist.addItem(it)
+            if cur_dir and Path(p["dir"]) == Path(cur_dir):
+                keep = i
+        self.current = current
+
+        cols = QHBoxLayout()
+        left, right = QVBoxLayout(), QVBoxLayout()
+        left.addWidget(QLabel(tr("Профиль:")))
+        left.addWidget(self.plist, 1)
+        right.addWidget(QLabel(tr("Сохранение (сверху самое свежее):")))
+        right.addWidget(self.slist, 1)
+        cols.addLayout(left, 1)
+        cols.addLayout(right, 1)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        self.open_btn = buttons.button(QDialogButtonBox.StandardButton.Open)
+
+        lay = QVBoxLayout(self)
+        if not self.profiles:
+            lay.addWidget(QLabel(tr("Профили не найдены в папке «Документы». Откройте game.sii вручную: Файл → Открыть сейв…")))
+        lay.addLayout(cols, 1)
+        lay.addWidget(buttons)
+        if self.profiles:
+            self.plist.setCurrentRow(keep)
+        else:
+            self.open_btn.setEnabled(False)
+
+    def _fill_slots(self, row):
+        self.slist.clear()
+        if row < 0 or row >= len(self.profiles):
+            return
+        keep = 0
+        for i, sv in enumerate(self.profiles[row]["saves"]):
+            when = datetime.fromtimestamp(sv["mtime"]).strftime("%d.%m.%Y %H:%M")
+            it = QListWidgetItem(f"{sv['title']}  ·  {when}")
+            it.setToolTip(str(sv["path"]))
+            self.slist.addItem(it)
+            if self.current and Path(sv["path"]) == Path(self.current):
+                keep = i
+        self.slist.setCurrentRow(keep)
+
+    def _accept(self):
+        p, s_row = self.plist.currentRow(), self.slist.currentRow()
+        if 0 <= p < len(self.profiles) and 0 <= s_row < len(self.profiles[p]["saves"]):
+            self.chosen = self.profiles[p]["saves"][s_row]["path"]
+            self.accept()
+
+
+def big_spin(lo, hi, value):
+    box = QSpinBox()
+    box.setRange(lo, hi)
+    box.setGroupSeparatorShown(True)
+    box.setSingleStep(1000)
+    box.setValue(max(lo, min(hi, value)))
+    box.setMinimumWidth(200)
+    return box
+
+
+class BalanceDialog(QDialog):
+    """Правка баланса компании и опыта игрока."""
+
+    def __init__(self, parent, money, xp):
+        super().__init__(parent)
+        self.setWindowTitle(tr("Баланс и опыт"))
+        self.money0, self.xp0 = money, xp
+        self.money = big_spin(edit.MONEY_MIN, edit.MONEY_MAX, money)
+        self.xp = big_spin(0, 2_147_483_647, xp)  # QSpinBox не умеет больше 2^31-1
+        self.xp.setSingleStep(100)
+        # если в сейве значение вне диапазона поля, без правки пользователя оно не должно записаться обрезанным
+        self.money0, self.xp0 = self.money.value(), self.xp.value()
+        form = QFormLayout()
+        form.addRow(tr("Баланс компании, €:"), self.money)
+        form.addRow(tr("Опыт игрока (XP):"), self.xp)
+        note = QLabel(tr("Сейчас: {money} € и {xp} XP. Как игра пересчитает уровень после правки опыта, на реальном "
+                         "сейве ещё не проверено; очки навыков программа не начисляет.",
+                         money=core.money(money), xp=core.money(xp)))
+        note.setWordWrap(True)
+        note.setStyleSheet(f"color: {theme.c('muted')};")
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        lay = QVBoxLayout(self)
+        lay.addLayout(form)
+        lay.addWidget(note)
+        lay.addWidget(buttons)
+
+    def changes(self):
+        out = {}
+        if self.money.value() != self.money0:
+            out["money"] = self.money.value()
+        if self.xp.value() != self.xp0:
+            out["xp"] = self.xp.value()
+        return out
+
+
+class UpdateChecker(QObject):
+    """Проверка обновлений в фоновом потоке (daemon), чтобы окно не подвисало без сети и не ждало её при выходе."""
+    done = Signal(bool, dict, str)  # есть новее, данные релиза, ошибка
+
+    def start(self):
+        self.running = True
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def _run(self):
+        try:
+            newer, rel = updates.check()
+            result = (newer, rel, "")
+        except updates.UpdateError as exc:
+            result = (False, {}, str(exc) or "?")
+        self.running = False
+        try:
+            self.done.emit(*result)
+        except RuntimeError:  # окно уже закрыто
+            pass
+
+
+def fit_to_screens(win, default_size=QSize(1300, 740)):
+    """Если окно оказалось за пределами экранов (отключили второй монитор, сменили масштаб), возвращает его на основной."""
+    screens = QGuiApplication.screens()
+    frame = win.frameGeometry()
+    # заголовок окна должен быть виден хотя бы на одном экране, иначе окно не перетащить
+    title = QRect(frame.left() + 40, frame.top(), max(1, frame.width() - 80), 30)
+    if any(sc.availableGeometry().intersects(title) for sc in screens) and not win.isMaximized():
+        avail = (win.screen() or QGuiApplication.primaryScreen()).availableGeometry()
+        if win.width() > avail.width() or win.height() > avail.height():
+            win.resize(min(win.width(), avail.width()), min(win.height(), avail.height()))
+        return
+    if win.isMaximized():
+        return
+    avail = QGuiApplication.primaryScreen().availableGeometry()
+    w = min(default_size.width(), int(avail.width() * 0.95))
+    h = min(default_size.height(), int(avail.height() * 0.9))
+    win.resize(w, h)
+    win.move(avail.left() + (avail.width() - w) // 2, avail.top() + (avail.height() - h) // 2)
+
+
 class MainWindow(QMainWindow):
     TABS = [
         ("drivers", "Водители", view.DRIVER_HEADERS, view.driver_rows),
@@ -644,9 +817,15 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ETS2 Company Manager")
-        self.resize(1300, 740)
-        self.settings = QSettings("ets2-company-manager", "gui")
+        self.setWindowTitle(f"{APP_NAME} {VERSION}")
+        avail = QGuiApplication.primaryScreen().availableGeometry()
+        self.resize(min(1300, int(avail.width() * 0.95)), min(740, int(avail.height() * 0.9)))
+        self.settings = app_settings()
+        self.updater = UpdateChecker(self)
+        self.updater.running = False
+        self.updater.done.connect(self._on_update_result)
+        self._manual_update = False
+        self._rebuilding = False
         self.company = None
         self.save_path = None
         self.mtime = 0.0
@@ -673,6 +852,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         menu = self.menuBar().addMenu(tr("Файл"))
+        self._action(menu, tr("Выбрать профиль и сохранение…"), self.choose_profile, "Ctrl+P")
         self._action(menu, tr("Открыть сейв…"), self.open_dialog, "Ctrl+O")
         self._action(menu, tr("Найти последний сейв"), self.open_latest, "Ctrl+L")
         self._action(menu, tr("Обновить"), self.reload, "F5")
@@ -685,6 +865,9 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
 
+        emenu = self.menuBar().addMenu(tr("Правка"))
+        self._action(emenu, tr("Баланс и опыт…"), self.edit_balance)
+
         lmenu = self.menuBar().addMenu("Язык / Language")
         for code, name in available_langs().items():
             act = self._action(lmenu, name, lambda c=code: self.switch_language(c), checkable=True)
@@ -696,6 +879,26 @@ class MainWindow(QMainWindow):
             act.setData(mode)
             act.setChecked(mode == theme.mode())
             self.theme_actions.append(act)
+
+        smenu = self.menuBar().addMenu(tr("Настройки"))
+        self.update_action = self._action(smenu, tr("Проверять обновления при запуске"), lambda: None, checkable=True)
+        self.update_action.setChecked(self.settings.value("check_updates", True, type=bool))
+        self.update_action.toggled.connect(lambda on: self.settings.setValue("check_updates", on))
+        scale_menu = smenu.addMenu(tr("Масштаб интерфейса"))
+        group = QActionGroup(self)
+        cur_scale = self.settings.value("ui_scale", 100, type=int)
+        for pct in UI_SCALES:
+            act = self._action(scale_menu, f"{pct}%", lambda p=pct: self.set_ui_scale(p), checkable=True)
+            act.setChecked(pct == cur_scale)
+            group.addAction(act)
+        smenu.addSeparator()
+        self._action(smenu, tr("Сбросить положение окна"), self.reset_window)
+
+        hmenu = self.menuBar().addMenu(tr("Справка"))
+        self._action(hmenu, tr("Проверить обновления"), lambda: self.check_updates(manual=True))
+        self._action(hmenu, tr("Страница проекта на GitHub"),
+                     lambda: QDesktopServices.openUrl(QUrl(f"https://github.com/{updates.REPO}")))
+        self._action(hmenu, tr("О программе"), self.show_about)
         self._build_action_rows()
         self.pages["drivers"].model.setHeaderData(
             10, Qt.Orientation.Horizontal,
@@ -732,11 +935,90 @@ class MainWindow(QMainWindow):
     def _rebuild(self):
         """Окно создаётся заново (язык и тема применяются целиком), сейв подгружается тот же."""
         global _window
-        old, _window = _window, MainWindow()
-        _window.resize(old.size())
+        old = _window
+        old._remember_geometry()
+        old._rebuilding = True
+        _window = MainWindow()
+        _window.restoreGeometry(old.saveGeometry())  # то же место, размер и монитор
         _window.show()
         _window.startup()
         old.close()
+
+    # ----- окно: положение, масштаб -----
+
+    def _remember_geometry(self):
+        self.settings.setValue("geometry", self.saveGeometry())
+
+    def restore_window(self):
+        """Возвращает окно туда, где его закрыли; если того экрана уже нет, ставит на основной."""
+        geo = self.settings.value("geometry")
+        if geo:
+            self.restoreGeometry(geo)
+        fit_to_screens(self)
+
+    def closeEvent(self, event):
+        if not self._rebuilding:
+            self._remember_geometry()
+        super().closeEvent(event)
+
+    def reset_window(self):
+        self.settings.remove("geometry")
+        self.showNormal()
+        avail = QGuiApplication.primaryScreen().availableGeometry()
+        w, h = min(1300, int(avail.width() * 0.95)), min(740, int(avail.height() * 0.9))
+        self.resize(w, h)
+        self.move(avail.left() + (avail.width() - w) // 2, avail.top() + (avail.height() - h) // 2)
+
+    def set_ui_scale(self, pct):
+        if pct == self.settings.value("ui_scale", 100, type=int):
+            return
+        self.settings.setValue("ui_scale", pct)
+        QMessageBox.information(self, tr("Масштаб интерфейса"),
+                                tr("Масштаб {pct}% применится после перезапуска программы.", pct=pct))
+
+    # ----- обновления -----
+
+    def check_updates(self, manual=False):
+        self._manual_update = self._manual_update or manual
+        if self.updater.running:
+            return
+        self.updater.start()
+        if manual:
+            self.statusBar().showMessage(tr("Проверяю обновления…"), 5000)
+
+    def _on_update_result(self, newer, rel, err):
+        manual, self._manual_update = self._manual_update, False
+        if err:
+            if manual:
+                QMessageBox.warning(self, tr("Проверка обновлений"),
+                                    tr("Не удалось проверить обновления: {err}", err=err))
+            return
+        if not newer:
+            if manual:
+                QMessageBox.information(self, tr("Проверка обновлений"),
+                                        tr("У вас последняя версия ({v}).", v=VERSION))
+            return
+        if not manual and self.settings.value("skip_version", "") == rel["version"]:
+            return
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(tr("Доступно обновление"))
+        box.setText(tr("Вышла версия {new} (у вас {cur}). Скачать её можно на странице релиза на GitHub.",
+                       new=rel["version"], cur=VERSION))
+        open_btn = box.addButton(tr("Открыть страницу релиза"), QMessageBox.ButtonRole.AcceptRole)
+        skip_btn = box.addButton(tr("Не напоминать об этой версии"), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(tr("Позже"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is open_btn:
+            QDesktopServices.openUrl(QUrl(rel["url"]))
+        elif box.clickedButton() is skip_btn:
+            self.settings.setValue("skip_version", rel["version"])
+
+    def show_about(self):
+        QMessageBox.about(self, tr("О программе"),
+                          f"<b>{APP_NAME}</b> {VERSION}<br>"
+                          + tr("Просмотр и правка компании в сейве Euro Truck Simulator 2.") + "<br>"
+                          f"<a href='https://github.com/{updates.REPO}'>github.com/{updates.REPO}</a>")
 
     def _btn(self, page, text, slot, tip="", primary=False):
         b = QPushButton(text)
@@ -804,8 +1086,14 @@ class MainWindow(QMainWindow):
         if path:
             self.load(path)
 
+    def choose_profile(self):
+        dlg = ProfileDialog(self, self.save_path)
+        if dlg.exec() and dlg.chosen:
+            self.load(dlg.chosen)
+
     def open_latest(self, silent=False):
-        path = view.find_latest_save()
+        """Самый свежий сейв: в профиле открытого сейва, а если сейв не открыт, среди всех профилей."""
+        path = view.find_latest_save(view.profile_dir_of(self.save_path) if self.save_path else None)
         if path:
             self.load(path)
         elif not silent:
@@ -1004,6 +1292,30 @@ class MainWindow(QMainWindow):
         if self._confirm_write(tr("Прокачать навыки: {name}", name=d['name']) + "\n" + "\n".join(parts)):
             self._run_ops([("skills", d["skill_unit"], changes)], tr("Навыки {name} повышены.", name=d['name']))
 
+    def edit_balance(self):
+        if not self._need_save():
+            return
+        c = self.company
+        if c.get("money") is None or not c.get("bank_unit") or not c.get("economy_unit"):
+            QMessageBox.information(self, tr("Баланс и опыт"), tr("Не нашёл в сейве счёт компании или опыт игрока."))
+            return
+        money = core.to_int(c["money"])
+        dlg = BalanceDialog(self, money, c["xp"])
+        if not dlg.exec():
+            return
+        ch = dlg.changes()
+        if not ch:
+            return
+        ops, parts = [], []
+        if "money" in ch:
+            ops.append(("money", c["bank_unit"], ch["money"]))
+            parts.append(tr("Баланс: {a} € -> {b} €", a=core.money(money), b=core.money(ch["money"])))
+        if "xp" in ch:
+            ops.append(("xp", c["economy_unit"], ch["xp"]))
+            parts.append(tr("Опыт: {a} -> {b}", a=core.money(c["xp"]), b=core.money(ch["xp"])))
+        if self._confirm_write(tr("Изменить баланс и опыт?") + "\n" + "\n".join(parts)):
+            self._run_ops(ops, tr("Баланс и опыт изменены."))
+
     def change_plate(self):
         if not self._need_save():
             return
@@ -1055,6 +1367,11 @@ _window = None
 
 def main():
     global _window
+    scale = app_settings().value("ui_scale", 100, type=int)
+    if scale in UI_SCALES and scale != 100 and "QT_SCALE_FACTOR" not in os.environ:
+        os.environ["QT_SCALE_FACTOR"] = str(scale / 100)
+    # дробный масштаб Windows (125%, 150%) без округления до целого
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     if sys.platform.startswith("win"):  # иначе на панели задач будет значок Python
         try:
@@ -1063,11 +1380,14 @@ def main():
         except (AttributeError, OSError):
             pass
     app.setWindowIcon(QIcon(str(ASSETS_ROOT / "ui" / "app_icon.png")))
-    set_lang(QSettings("ets2-company-manager", "gui").value("lang", "ru"))
-    theme.apply(app, ASSETS_ROOT / "ui", QSettings("ets2-company-manager", "gui").value("theme", "dark"))
+    set_lang(app_settings().value("lang", "ru"))
+    theme.apply(app, ASSETS_ROOT / "ui", app_settings().value("theme", "dark"))
     _window = MainWindow()
+    _window.restore_window()
     _window.show()
     QTimer.singleShot(0, _window.startup)
+    if _window.update_action.isChecked():
+        QTimer.singleShot(1500, lambda: _window.check_updates(manual=False))
     sys.exit(app.exec())
 
 

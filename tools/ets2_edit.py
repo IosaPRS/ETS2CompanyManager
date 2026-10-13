@@ -1,4 +1,4 @@
-"""Запись в сейв: ремонт, заправка, номера, апгрейд гаража, навыки. Перед записью делается копия в ets2cm_backups."""
+"""Запись в сейв: ремонт, заправка, номера, апгрейд гаража, навыки, баланс и опыт. Перед записью делается копия в ets2cm_backups."""
 import os
 import re
 import shutil
@@ -25,16 +25,19 @@ class EditError(Exception):
 
 # ---------- проверки окружения ----------
 
+GAME_EXES = ("eurotrucks2.exe", "amtrucks.exe")  # ETS2 и ATS
+
+
 def game_running() -> bool:
-    """True, если запущена игра (Windows: eurotrucks2.exe). На других системах всегда False."""
+    """True, если запущена ETS2 или ATS (Windows, по списку процессов). На других системах всегда False."""
     if not sys.platform.startswith("win"):
         return False
     try:
-        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq eurotrucks2.exe", "/NH"], capture_output=True,
-                             text=True, timeout=10, creationflags=0x08000000).stdout
+        out = subprocess.run(["tasklist", "/NH", "/FO", "CSV"], capture_output=True,
+                             text=True, timeout=10, creationflags=0x08000000).stdout.lower()
     except (OSError, subprocess.SubprocessError):
         return False
-    return "eurotrucks2.exe" in out.lower()
+    return any(f'"{exe}"' in out for exe in GAME_EXES)
 
 
 # ---------- текст сейва ----------
@@ -203,6 +206,22 @@ def raise_skills(lines, unit_id, changes: dict):
         set_field(lines, unit_id, key, str(new))
 
 
+MONEY_MIN, MONEY_MAX = -2_147_483_648, 2_147_483_647  # поле в игре 64-битное; берём безопасный 32-битный диапазон
+XP_MAX = 4_294_967_295  # предел 32-битного поля без знака; в игре не проверен
+
+
+def set_int_field(lines, unit_id, key, value: int, lo: int, hi: int, what: str):
+    """Меняет целое поле (баланс, опыт). Поле должно уже быть в юните и быть целым числом."""
+    cur = get_field(lines, unit_id, key)
+    if cur is None or not re.fullmatch(r"-?\d+", cur):
+        raise EditError(tr("У юнита {unit} нет поля {key}: структура сейва неожиданная, правка отменена.", unit=unit_id, key=key))
+    value = int(value)
+    if not lo <= value <= hi:
+        raise EditError(tr("{what}: допустимо от {lo} до {hi}.", what=what, lo=f"{lo:,}".replace(",", " "),
+                           hi=f"{hi:,}".replace(",", " ")))
+    return set_field(lines, unit_id, key, str(value))
+
+
 # ---------- сверка и запись ----------
 
 def _diff_units(a: "core.Save", b: "core.Save"):
@@ -240,11 +259,12 @@ def restore_backup(path: Path, backup_file: Path):
 
 
 def apply_ops(path, ops, expected_mtime=None):
-    """ops: [('repair', unit, full), ('plate', unit, 'ABC 123'), ('skills', unit, {'long_dist': 3}), ...]. Возвращает отчёт."""
+    """ops: [('repair', unit, full), ('plate', unit, 'ABC 123'), ('skills', unit, {'long_dist': 3}),
+    ('money', bank_unit, 100000), ('xp', economy_unit, 50000), ...]. Возвращает отчёт."""
     path = Path(path)
     if game_running():
-        raise EditError(tr("Игра запущена. Закройте Euro Truck Simulator 2 и повторите: пока игра открыта, "
-                           "она перезапишет изменения."))
+        raise EditError(tr("Игра запущена. Закройте Euro Truck Simulator 2 (или American Truck Simulator) и повторите: "
+                           "пока игра открыта, она перезапишет изменения."))
     if expected_mtime is not None and path.stat().st_mtime != expected_mtime:
         raise EditError(tr("Сейв изменился после загрузки в программу. Обновите данные (F5) и повторите."))
 
@@ -271,6 +291,12 @@ def apply_ops(path, ops, expected_mtime=None):
             upgrade_garage(lines, op[1], op[2], op[3])
             touched += 1
             expected.update(op[1:3])
+        elif op[0] == "money":  # ('money', bank_unit, новый_баланс)
+            touched += set_int_field(lines, op[1], "money_account", op[2], MONEY_MIN, MONEY_MAX, tr("Баланс"))
+            expected.add(op[1])
+        elif op[0] == "xp":  # ('xp', economy_unit, новый_опыт)
+            touched += set_int_field(lines, op[1], "experience_points", op[2], 0, XP_MAX, tr("Опыт"))
+            expected.add(op[1])
         elif op[0] == "skills":  # ('skills', unit, {поле: значение})
             raise_skills(lines, op[1], op[2])
             touched += 1

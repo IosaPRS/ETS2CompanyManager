@@ -4,6 +4,8 @@
 """
 import re
 
+from requirements.ets2_i18n import tr
+
 # код модели из сейва -> ключ в списке названий
 _ALIASES = {
     "daf.xf": "daf",
@@ -44,6 +46,7 @@ TRAILER_SERIES = {
     "scs.livestock": "LST", "scs.log": "LOG", "scs.lowbed": "LWB", "scs.lowloader": "LLD", "scs.silo": "SLO",
 }
 
+# тип кузова прицепа (body_type из сейва) -> русское название; перевод берётся из locales через tr()
 BODY_TYPES = {
     "dryvan": "Тентованный/фургон", "curtainside": "Штора", "refrigerated": "Рефрижератор",
     "flatbed": "Бортовой", "container": "Контейнеровоз", "tank": "Цистерна", "foodtank": "Пищевая цистерна",
@@ -83,7 +86,8 @@ def truck_name(code) -> str:
 
 def trailer_name(code, body_type=None) -> str:
     """'scs.box' + 'refrigerated' -> 'Рефрижератор · SCS STD'."""
-    body = BODY_TYPES.get((body_type or "").lower(), (body_type or "").capitalize())
+    raw = (body_type or "").lower()
+    body = tr(BODY_TYPES[raw]) if raw in BODY_TYPES else raw.replace("_", " ").capitalize()
     if code:
         brand = code.split(".", 1)[0]
         label = f"{TRAILER_BRANDS.get(brand, brand.capitalize())} {TRAILER_SERIES.get(code, code.split('.', 1)[-1].replace('_', ' ').title())}"
