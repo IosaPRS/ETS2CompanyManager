@@ -152,9 +152,7 @@
  "Гараж {city}: малый -> большой.\nСколько списать со счёта? Введите цену, которую показывает игра (по умолчанию разница цен 150 000 €; 0 — не списывать).": "Garage {city}: small -> large.\nHow much to deduct from the account? Enter the price shown in the game (default: price difference €150,000; 0 = do not deduct).",
  "Улучшить гараж {city} до большого за {cost} €?": "Upgrade garage {city} to large for €{cost}?",
  "Гараж {city} улучшен до большого.": "Garage {city} upgraded to large.",
- "Прокачать навыки: {name}": "Level up skills: {name}",
  "ADR: классов {a} -> {b}": "ADR: classes {a} -> {b}",
- "Навыки {name} повышены.": "Skills of {name} increased.",
  "Новый номер": "New plate",
  "Номер {plate}. Меняется только сам номер ({body}), регион и герб остаются. Латиница, цифры, пробел, дефис, до 12 символов:": "Plate {plate}. Only the plate text ({body}) changes; region and emblem stay. Latin letters, digits, space, hyphen, up to 12 characters:",
  "Сменить номер {old} на {new}?": "Change plate {old} to {new}?",
@@ -168,7 +166,6 @@
  "Не удалось": "Failed",
  "Применить к сейву…": "Apply to save…",
  "Сбросить выбор": "Reset selection",
- "Предел суммы навыков:": "Skill sum limit:",
  "Σ навыков {n}/36": "Σ skills {n}/36",
  "Нет водителей": "No drivers",
  "Свободно очков: ": "Free points: ",
@@ -280,7 +277,6 @@
  "ур. {n}": "lvl {n}",
  "Уровень игрока:": "Player level:",
  "Ур.": "Lvl",
- "Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), поэтому предел ставится по уровню водителя. Можно изменить вручную.": "Skill sum limit (Σ). There are as many skill points as levels (max 36), so the limit is set from the driver's level. You can change it by hand.",
  "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Обычно равна уровню: одно очко за уровень.": "Driver's total skill points (ADR counts by number of classes). Max 36: 6 skills × 6. Usually equals the level: one point per level.",
  "Уровень по опыту, как в игре. У нанятых водителей порог каждого уровня вдвое выше, чем у игрока.": "Level from XP, as in the game. For hired drivers each level needs twice the player's XP.",
  "<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage}": "<b>Home:</b> {home} &nbsp; <b>Now:</b> {city} &nbsp; <b>Garage:</b> {garage}",
@@ -296,5 +292,9 @@
  "Сейчас: {money} €.": "Now: €{money}.",
  "Сейчас: уровень {lvl}. В сейв записывается опыт ровно на начало выбранного уровня; очки навыков программа не начисляет.": "Now: level {lvl}. The save gets the XP at the exact start of the chosen level; the program does not add skill points.",
  "Уровень изменён.": "Level changed.",
- "Уровень…": "Level…"
+ "Уровень…": "Level…",
+ "Водитель {name} изменён.": "Driver {name} changed.",
+ "Изменить водителя: {name}": "Change driver: {name}",
+ "Уровень водителя. Очков навыков столько же, сколько уровней (максимум 36). Новый уровень записывается в сейв как опыт ровно на начало этого уровня.": "Driver level. There are as many skill points as levels (max 36). The new level is written to the save as the XP at the exact start of that level.",
+ "Уровень:": "Level:"
 }

@@ -47,3 +47,8 @@ def level_progress(xp: int, is_player=False):
     lvl = level_for_xp(int(xp) // k)
     start = xp_for_level(lvl) * k
     return lvl, int(xp) - start, xp_for_level(lvl + 1) * k - start
+
+
+def xp_for_driver_level(level: int, is_player=False) -> int:
+    """Опыт на начало уровня: у игрока по таблице, у нанятого водителя вдвое больше."""
+    return xp_for_level(level) * (1 if is_player else DRIVER_XP_FACTOR)

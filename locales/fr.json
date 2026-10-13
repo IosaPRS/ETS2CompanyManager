@@ -152,9 +152,7 @@
  "Гараж {city}: малый -> большой.\nСколько списать со счёта? Введите цену, которую показывает игра (по умолчанию разница цен 150 000 €; 0 — не списывать).": "Garage {city} : petit -> grand.\nCombien débiter du compte ? Saisissez le prix affiché dans le jeu (par défaut la différence, 150 000 € ; 0 = ne pas débiter).",
  "Улучшить гараж {city} до большого за {cost} €?": "Passer le garage {city} en grand pour {cost} € ?",
  "Гараж {city} улучшен до большого.": "Le garage {city} est passé en grand.",
- "Прокачать навыки: {name}": "Améliorer les compétences : {name}",
  "ADR: классов {a} -> {b}": "ADR : classes {a} -> {b}",
- "Навыки {name} повышены.": "Compétences de {name} améliorées.",
  "Новый номер": "Nouvelle plaque",
  "Номер {plate}. Меняется только сам номер ({body}), регион и герб остаются. Латиница, цифры, пробел, дефис, до 12 символов:": "Plaque {plate}. Seul le texte ({body}) change, la région et l'emblème restent. Lettres latines, chiffres, espace, tiret, 12 caractères max. :",
  "Сменить номер {old} на {new}?": "Changer la plaque {old} en {new} ?",
@@ -168,7 +166,6 @@
  "Не удалось": "Échec",
  "Применить к сейву…": "Appliquer à la sauvegarde…",
  "Сбросить выбор": "Réinitialiser la sélection",
- "Предел суммы навыков:": "Limite de la somme des compétences :",
  "Σ навыков {n}/36": "Σ compét. {n}/36",
  "Нет водителей": "Aucun conducteur",
  "Свободно очков: ": "Points libres : ",
@@ -280,7 +277,6 @@
  "ур. {n}": "niv. {n}",
  "Уровень игрока:": "Niveau du joueur :",
  "Ур.": "Niv.",
- "Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), поэтому предел ставится по уровню водителя. Можно изменить вручную.": "Limite de la somme des compétences (Σ). Il y a autant de points que de niveaux (36 max.), la limite suit donc le niveau du chauffeur. Vous pouvez la modifier à la main.",
  "Сумма очков навыков водителя (ADR считается по числу классов). Максимум 36: 6 навыков по 6. Обычно равна уровню: одно очко за уровень.": "Total des points de compétence du chauffeur (l'ADR compte par nombre de classes). 36 max. : 6 compétences × 6. En général égal au niveau : un point par niveau.",
  "Уровень по опыту, как в игре. У нанятых водителей порог каждого уровня вдвое выше, чем у игрока.": "Niveau d'après l'expérience, comme dans le jeu. Pour les chauffeurs embauchés, chaque niveau demande deux fois plus d'expérience que pour le joueur.",
  "<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage}": "<b>Origine :</b> {home} &nbsp; <b>Actuellement :</b> {city} &nbsp; <b>Garage :</b> {garage}",
@@ -296,5 +292,9 @@
  "Сейчас: {money} €.": "Actuellement : {money} €.",
  "Сейчас: уровень {lvl}. В сейв записывается опыт ровно на начало выбранного уровня; очки навыков программа не начисляет.": "Actuellement : niveau {lvl}. La sauvegarde reçoit l'expérience exacte du début du niveau choisi ; le programme n'ajoute pas de points de compétence.",
  "Уровень изменён.": "Niveau modifié.",
- "Уровень…": "Niveau…"
+ "Уровень…": "Niveau…",
+ "Водитель {name} изменён.": "Chauffeur {name} modifié.",
+ "Изменить водителя: {name}": "Modifier le chauffeur : {name}",
+ "Уровень водителя. Очков навыков столько же, сколько уровней (максимум 36). Новый уровень записывается в сейв как опыт ровно на начало этого уровня.": "Niveau du chauffeur. Il y a autant de points de compétence que de niveaux (36 max.). Le nouveau niveau est écrit dans la sauvegarde comme l'expérience exacte du début de ce niveau.",
+ "Уровень:": "Niveau :"
 }

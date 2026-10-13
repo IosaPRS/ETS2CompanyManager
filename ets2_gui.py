@@ -19,7 +19,7 @@ from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDesktopServic
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QGraphicsOpacityEffect, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
     QLabel, QCheckBox, QFrame, QInputDialog, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-    QPushButton, QSpinBox, QTableView, QToolButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QSizePolicy, QSpinBox, QTableView, QToolButton, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from tools import ets2_edit as edit
@@ -32,6 +32,8 @@ from requirements import updates
 from requirements.app_info import APP_NAME, VERSION
 from requirements import levels
 from requirements.levels import SKILL_POINTS_MAX
+
+LEVEL_MAX = 500
 
 ASSETS_ROOT = data_path("assets")
 ASSETS = ASSETS_ROOT / "brands"
@@ -269,7 +271,7 @@ def skill_pixmap(name, size, dim=False):
 
 class SkillsPage(QWidget):
     """Вкладка «Навыки»: прокачка навыков имеющихся водителей, как в игре: выбираешь, что поднять, и применяешь."""
-    applyRequested = Signal(str, dict)  # id водителя, {поле сейва: новое значение}
+    applyRequested = Signal(str, dict, int)  # id водителя, {навык: новое значение}, новый уровень (-1: без изменений)
     PIP = 30
 
     def __init__(self, settings):
@@ -298,19 +300,20 @@ class SkillsPage(QWidget):
         self.title.setTextFormat(Qt.TextFormat.RichText)
         self.points = QLabel()
         self.points.setTextFormat(Qt.TextFormat.RichText)
-        self.limit = QSpinBox()
-        self.limit.setRange(0, SKILL_POINTS_MAX)
-        self.limit.setToolTip(tr("Предел суммы навыков (Σ). Очков навыков столько же, сколько уровней (максимум 36), "
-                                 "поэтому предел ставится по уровню водителя. Можно изменить вручную."))
-        self.limit.valueChanged.connect(self._limit_changed)
+        self.new_level = None  # новый уровень водителя или None
+        self.level = QSpinBox()
+        self.level.setRange(0, LEVEL_MAX)
+        self.level.setToolTip(tr("Уровень водителя. Очков навыков столько же, сколько уровней (максимум 36). "
+                                 "Новый уровень записывается в сейв как опыт ровно на начало этого уровня."))
+        self.level.valueChanged.connect(self._level_changed)
         head = QHBoxLayout()
         head.addWidget(self.avatar)
         info = QVBoxLayout()
         info.addWidget(self.title)
         info.addWidget(self.points)
         lim_row = QHBoxLayout()
-        lim_row.addWidget(QLabel(tr("Предел суммы навыков:")))
-        lim_row.addWidget(self.limit)
+        lim_row.addWidget(QLabel(tr("Уровень:")))
+        lim_row.addWidget(self.level)
         lim_row.addStretch(1)
         info.addLayout(lim_row)
         head.addLayout(info, 1)
@@ -327,10 +330,22 @@ class SkillsPage(QWidget):
         btns.addWidget(self.reset_btn)
         btns.addWidget(self.apply_btn)
 
+        body = QVBoxLayout()
+        body.addLayout(head)
+        body.addLayout(self.rows_box)
+        body.addStretch(1)
+        body_w = QWidget()
+        body_w.setLayout(body)
+        scroll = QScrollArea()  # на небольшом экране или при масштабе 125-150% навыки не обрезаются
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidget(body_w)
+        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        scroll.viewport().setAutoFillBackground(False)
+        body_w.setAutoFillBackground(False)
         right = QVBoxLayout()
-        right.addLayout(head)
-        right.addLayout(self.rows_box)
-        right.addStretch(1)
+        right.setContentsMargins(0, 0, 0, 0)
+        right.addWidget(scroll, 1)
         right.addLayout(btns)
         right_w = QWidget()
         right_w.setLayout(right)
@@ -379,19 +394,29 @@ class SkillsPage(QWidget):
     def _select(self, did):
         self.current_id = did
         self.driver = next((d for d in self.company["drivers"] if d["id"] == did), None) if self.company else None
-        self.pending = {}
+        self.pending, self.new_level = {}, None
         if self.driver:
-            self.limit.blockSignals(True)
-            self.limit.setValue(min(SKILL_POINTS_MAX, self.driver["level"]))
-            self.limit.blockSignals(False)
+            d = self.driver
+            self.level.blockSignals(True)
+            # ниже уже потраченных очков уровень не опустить: навыки не снимаются
+            self.level.setRange(min(d["level"], d["skill_sum"]), max(LEVEL_MAX, d["level"]))
+            self.level.setValue(d["level"])
+            self.level.blockSignals(False)
         self._render()
 
-    def _limit_changed(self, _v):
+    def _level_changed(self, v):
+        if not self.driver:
+            return
+        self.new_level = None if v == self.driver["level"] else v
+        if self._sum() > self._limit():  # выбранные навыки больше не помещаются в новый уровень
+            self.pending = {}
         self._render()
+
+    def _limit(self):
+        return min(SKILL_POINTS_MAX, self.level.value())
 
     def _reset(self):
-        self.pending = {}
-        self._render()
+        self._select(self.current_id)
 
     # ----- состояние -----
 
@@ -405,7 +430,7 @@ class SkillsPage(QWidget):
         return sum(self._level(k) for k, *_ in SKILL_ROWS) + bin(self._mask()).count("1")
 
     def _free(self):
-        return max(0, self.limit.value() - self._sum())
+        return max(0, self._limit() - self._sum())
 
     def _set_level(self, key, i):
         base, cur = self.driver["skills"][key], self._level(key)
@@ -451,8 +476,9 @@ class SkillsPage(QWidget):
     def _render(self):
         self._clear_rows()
         d = self.driver
-        self.apply_btn.setEnabled(bool(d and self.pending))
-        self.reset_btn.setEnabled(bool(d and self.pending))
+        changed = bool(d and (self.pending or self.new_level is not None))
+        self.apply_btn.setEnabled(changed)
+        self.reset_btn.setEnabled(changed)
         if not d:
             self.title.setText(tr("Нет водителей"))
             self.points.clear()
@@ -468,7 +494,7 @@ class SkillsPage(QWidget):
                            f"{d['city'] or '-'} · {st_text}<br>" + view.level_text(d))
         free = self._free()
         self.points.setText(tr("Свободно очков: ") + f"<b style='color:{theme.c('accent') if free else theme.c('muted')}'>{free}</b> "
-                            + tr("· Σ {a} из {b}", a=self._sum(), b=self.limit.value()))
+                            + tr("· Σ {a} из {b}", a=self._sum(), b=self._limit()))
 
         for key, icon, name, hint in SKILL_ROWS:
             level, base = self._level(key), d["skills"][key]
@@ -534,10 +560,14 @@ class SkillsPage(QWidget):
         cls_w = QWidget()
         cls_w.setLayout(cls)
         self.rows_box.addWidget(cls_w)
+        for i in range(self.rows_box.count()):  # строки не сжимаются: при нехватке места появляется прокрутка
+            w = self.rows_box.itemAt(i).widget()
+            if w:
+                w.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
     def _apply(self):
-        if self.driver and self.pending:
-            self.applyRequested.emit(self.driver["id"], dict(self.pending))
+        if self.driver and (self.pending or self.new_level is not None):
+            self.applyRequested.emit(self.driver["id"], dict(self.pending), -1 if self.new_level is None else self.new_level)
 
 
 def wrench_icon(size=32):
@@ -835,9 +865,6 @@ class ValueDialog(QDialog):
     def new_value(self):
         """Новое значение или None, если не меняли."""
         return self.spin.value() if self.spin.value() != self.start else None
-
-
-LEVEL_MAX = 500
 
 
 class UpdateChecker(QObject):
@@ -1358,21 +1385,26 @@ class MainWindow(QMainWindow):
         if ok and self._confirm_write(tr("Улучшить гараж {city} до большого за {cost} €?", city=g['city'], cost=f"{cost:,}".replace(",", " "))):
             self._run_ops([("upgrade", gid, self.company["bank_unit"], cost)], tr("Гараж {city} улучшен до большого.", city=g['city']))
 
-    def apply_skills(self, did, changes):
+    def apply_skills(self, did, changes, new_level=-1):
         if not self._need_save():
             return
         d = next((x for x in self.company["drivers"] if x["id"] == did), None)
         if not d:
             return
         names = {k: n for k, _, n, _ in SKILL_ROWS}
-        parts = []
+        parts, ops = [], []
+        if new_level >= 0:
+            parts.append(tr("Уровень: {a} -> {b}", a=d["level"], b=new_level))
+            ops.append(("xp", d["skill_unit"], levels.xp_for_driver_level(new_level, d["is_player"])))
         for k, v in changes.items():
             if k == "adr":
                 parts.append(tr("ADR: классов {a} -> {b}", a=bin(d['skills']['adr']).count('1'), b=bin(v).count('1')))
             else:
                 parts.append(f"{tr(names[k])}: {d['skills'][k]} -> {v}")
-        if self._confirm_write(tr("Прокачать навыки: {name}", name=d['name']) + "\n" + "\n".join(parts)):
-            self._run_ops([("skills", d["skill_unit"], changes)], tr("Навыки {name} повышены.", name=d['name']))
+        if changes:
+            ops.append(("skills", d["skill_unit"], changes))
+        if self._confirm_write(tr("Изменить водителя: {name}", name=d['name']) + "\n" + "\n".join(parts)):
+            self._run_ops(ops, tr("Водитель {name} изменён.", name=d['name']))
 
     def _economy_ready(self, need):
         if not self._need_save():
