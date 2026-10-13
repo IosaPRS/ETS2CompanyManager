@@ -431,7 +431,7 @@ def build_company(sv: Save) -> dict:
         adr_classes = bin(skills["adr"]).count("1")
         truck_ref = slot_truck.get(did) or (trucks[i] if i < len(trucks) else None)
         truck = build_truck(sv, truck_ref) if truck_ref else None
-        job = parse_job(sv, d.get("driver_job"), now)
+        job = parse_job(sv, pl.get("current_job") if is_player else d.get("driver_job"), now)  # игрок: player.current_job (юнит player_job)
         trailer_ref = player_trailer if is_player else d.get("assigned_trailer")
         drivers.append({
             "id": did,

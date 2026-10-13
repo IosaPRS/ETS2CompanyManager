@@ -42,9 +42,10 @@ def has_problem(d):
 
 def driver_status(d):
     """(текст, значок@фон) для водителя."""
-    if not d["truck"] or str(d.get("state")) == STATE_NO_TRUCK:
+    quick_job = d.get("is_player") and d["job"] and not d["truck"]  # игрок на быстром заказе едет на грузовике компании-заказчика
+    if not quick_job and (not d["truck"] or str(d.get("state")) == STATE_NO_TRUCK):
         return tr("без трака"), status_spec("no_vehicle", "red")
-    if has_problem(d):
+    if not quick_job and has_problem(d):
         return tr("требует ремонта"), status_spec("driver_status_truck_undrivable", "red")
     ph = job_phase(d)
     if ph == "parked":
@@ -141,10 +142,10 @@ def c_num(n, tint=None):
 
 
 def route_text(d):
-    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - «Без рейса» (у игрока заказ в сейве не виден - прочерк)."""
+    """Строка маршрута: откуда -> куда, груз, длина. Без заказа - «Без рейса»."""
     j = d["job"]
     if not j:
-        return "-" if d.get("is_player") else tr("Без рейса")
+        return tr("Без рейса")
     return tr("{src} → {dst} · {cargo} · {km} км", src=j["source"], dst=j["target"], cargo=j["cargo"], km=j["km"])
 
 
