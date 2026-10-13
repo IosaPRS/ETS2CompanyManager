@@ -367,5 +367,8 @@
  "В info.sii нет описания сохранения.": "info.sii has no save description.",
  "Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. В игре: Загрузить игру → этот слот.": "Saved to a new slot “{name}” (folder {folder}). The original save is unchanged. In the game: Load game → this slot.",
  "Сохранять правки в копию сейва («… Edited»)": "Save edits to a copy of the save (“… Edited”)",
- "Язык": "Language"
+ "Язык": "Language",
+ "Грузовик компании-заказчика (быстрая работа), не ваш": "Client company's truck (quick job), not yours",
+ "Прицеп компании-заказчика (быстрая работа), не ваш": "Client company's trailer (quick job), not yours",
+ "быстрая работа": "quick job"
 }

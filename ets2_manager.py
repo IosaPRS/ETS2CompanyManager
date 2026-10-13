@@ -274,6 +274,12 @@ def build_trailer(sv: Save, name):
         return None
     d = sv.ref(t.get("trailer_definition")) or {}
     code = accessory_match(sv, t, TRAILER_PATH)
+    body_type = d.get("body_type")
+    tdef = str(t.get("trailer_definition") or "")
+    if not d and tdef.startswith("trailer_def."):  # прицеп заказчика: определение из игры, не юнит сейва
+        parts = tdef.split(".")  # trailer_def.scs.box.single_3.curtain
+        body_type = {"curtain": "curtainside"}.get(parts[-1], parts[-1])
+        code = code or ".".join(parts[1:3])
     parts = {
         "body": part_wear(t, "trailer_body_wear"),
         "chassis": part_wear(t, "chassis_wear"),
@@ -281,7 +287,7 @@ def build_trailer(sv: Save, name):
     }
     return {
         "unit": name,
-        "kind": ets2_names.trailer_name(code, d.get("body_type")),
+        "kind": ets2_names.trailer_name(code, body_type),
         "plate": clean_plate(t.get("license_plate")),
         "plate_body": plate_body(t.get("license_plate")),
         "odometer": to_int(t.get("odometer")),
@@ -487,7 +493,20 @@ def build_company(sv: Save) -> dict:
             t["garage"] = truck_garage.get(n, "")
             free_trucks.append(t)
 
+    # быстрая работа: игрок едет на грузовике и прицепе компании-заказчика (их нет в player.trucks/trailers)
+    pjob = sv.ref(pl.get("current_job")) or {}
+    job_truck = job_trailer = None
+    ct, ctr = pjob.get("company_truck"), pjob.get("company_trailer")
+    if ct not in (None, "", "null", "nil") and ct not in pl.get("trucks[]", []):
+        job_truck = build_truck(sv, ct)
+    if ctr not in (None, "", "null", "nil") and ctr not in pl.get("trailers[]", []):
+        job_trailer = build_trailer(sv, ctr)
+    for d in drivers:
+        d["quick_job"] = bool(d["is_player"] and d["job"] and job_truck)
+
     return {
+        "job_truck": job_truck,
+        "job_trailer": job_trailer,
         "hq": (pl.get("hq_city") or "").capitalize(),
         "money": bank.get("money_account"),
         "economy_unit": eco.get("_name"),

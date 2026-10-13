@@ -151,8 +151,13 @@ class KeyFilterProxy(QSortFilterProxyModel):
         self.keys = None
 
     def set_keys(self, keys):
-        self.keys = set(keys) if keys is not None else None
-        self.invalidateFilter()
+        if hasattr(self, "beginFilterChange"):  # Qt 6.9+: invalidateFilter() устарел
+            self.beginFilterChange()
+            self.keys = set(keys) if keys is not None else None
+            self.endFilterChange()
+        else:
+            self.keys = set(keys) if keys is not None else None
+            self.invalidateFilter()
 
     def filterAcceptsRow(self, row, parent):
         if self.keys is not None:
@@ -1592,14 +1597,14 @@ class MainWindow(QMainWindow):
         if not key:
             return None
         if tab == "trucks":
-            t = next((x for x in self.company.get("free_trucks", []) if x["unit"] == key), None)
+            t = next((x for x in self.company.get("free_trucks", []) + [self.company.get("job_truck")] if x and x["unit"] == key), None)
             if t:
                 return ("truck", t["unit"], t)
         if tab in ("drivers", "trucks"):
             d = next((x for x in self.company["drivers"] if x["id"] == key), None)
             return ("truck", d["truck"]["unit"], d["truck"]) if d and d["truck"] else None
         if tab == "trailers":
-            t = next((x for x in self.company["trailers"] if x["unit"] == key), None)
+            t = next((x for x in self.company["trailers"] + [self.company.get("job_trailer")] if x and x["unit"] == key), None)
             return ("trailer", t["unit"], t) if t else None
         return None
 
@@ -1683,6 +1688,7 @@ class MainWindow(QMainWindow):
         units = [d["truck"]["unit"] for d in self.company["drivers"] if d["truck"]]
         units += [t["unit"] for t in self.company.get("free_trucks", [])]
         units += [t["unit"] for t in self.company["trailers"]]
+        units += [t["unit"] for t in (self.company.get("job_truck"), self.company.get("job_trailer")) if t]  # быстрая работа
         if self._confirm_write(tr("Починить все траки и прицепы компании ({n} шт.)?", n=len(units))):
             full = self.full_repair_checked()
             self._run_ops([("repair", u, full) for u in dict.fromkeys(units)], tr("Весь парк починен."))
@@ -1703,6 +1709,8 @@ class MainWindow(QMainWindow):
             return
         units = [d["truck"]["unit"] for d in self.company["drivers"] if d["truck"]]
         units += [t["unit"] for t in self.company.get("free_trucks", [])]
+        if self.company.get("job_truck"):
+            units.append(self.company["job_truck"]["unit"])
         if self._confirm_write(tr("Заправить все траки компании ({n} шт.) до полного бака?", n=len(units))):
             self._run_ops([("refuel", u) for u in dict.fromkeys(units)], tr("Все баки заполнены."))
 

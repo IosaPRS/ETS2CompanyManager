@@ -367,5 +367,8 @@
  "В info.sii нет описания сохранения.": "info.sii enthält keine Spielstandbeschreibung.",
  "Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. В игре: Загрузить игру → этот слот.": "In neuem Slot „{name}“ gespeichert (Ordner {folder}). Der ursprüngliche Spielstand ist unverändert. Im Spiel: Spiel laden → diesen Slot.",
  "Сохранять правки в копию сейва («… Edited»)": "Änderungen in Kopie des Spielstands speichern („… Edited“)",
- "Язык": "Sprache"
+ "Язык": "Sprache",
+ "Грузовик компании-заказчика (быстрая работа), не ваш": "Lkw der Auftraggeberfirma (Schnellauftrag), nicht deiner",
+ "Прицеп компании-заказчика (быстрая работа), не ваш": "Auflieger der Auftraggeberfirma (Schnellauftrag), nicht deiner",
+ "быстрая работа": "Schnellauftrag"
 }

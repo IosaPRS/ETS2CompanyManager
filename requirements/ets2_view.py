@@ -42,7 +42,8 @@ def has_problem(d):
 
 def driver_status(d):
     """(текст, значок@фон) для водителя."""
-    quick_job = d.get("is_player") and d["job"] and not d["truck"]  # игрок на быстром заказе едет на грузовике компании-заказчика
+    # игрок на быстром заказе едет на грузовике компании-заказчика
+    quick_job = d.get("quick_job") or (d.get("is_player") and d["job"] and not d["truck"])
     if not quick_job and (not d["truck"] or str(d.get("state")) == STATE_NO_TRUCK):
         return tr("без трака"), status_spec("no_vehicle", "red")
     if not quick_job and has_problem(d):
@@ -58,9 +59,10 @@ def driver_status(d):
 
 
 def truck_status(d):
-    t = d["truck"]
     if has_problem(d):
         return tr("требует ремонта"), status_spec("truck_status_undrivable", "red")
+    if d.get("quick_job"):  # свой грузовик стоит, игрок едет на грузовике заказчика
+        return tr("простаивает"), status_spec("truck_status_idle", "gray")
     ph = job_phase(d)
     if ph == "parked":
         return tr("на стоянке"), status_spec("truck_status_parked_on_job", "blue")
@@ -205,6 +207,20 @@ def truck_rows(c):
         cells.append(cell(tr("без водителя"), tint=status_tint(tr("простаивает")), icon="status:" + status_spec("truck_status_idle", "gray"),
                           center=True))
         rows.append((t["unit"], cells))
+    t = c.get("job_truck")
+    if t:  # грузовик быстрой работы: не свой, но игрок едет на нём и может его разбить
+        player = next((d for d in c["drivers"] if d.get("is_player")), None)
+        w = t["wear"]
+        cells = [cell(t["model"], icon=t["brand"], tip=tr("Грузовик компании-заказчика (быстрая работа), не ваш")),
+                 cell(t["plate"]), cell(player["name"] if player else "-"),
+                 num_cell(t["odometer"]), cell(f'{t["fuel_pct"]:.0f}%', t["fuel_pct"], center=True)]
+        cells += [wear_cell(w[k]) for k in ("engine", "transmission", "cabin", "chassis", "wheels")]
+        cells.append(wear_cell(t["wear_max"]))
+        pm = t["perm_max"]
+        cells.append(cell(f"{pm:.1f}%", pm, center=True))
+        cells.append(cell(tr("быстрая работа"), tint=status_tint(tr("в рейсе")),
+                          icon="status:" + status_spec("trailer_status_on_job", "green"), center=True))
+        rows.append((t["unit"], cells))
     return rows
 
 
@@ -223,6 +239,14 @@ def trailer_rows(c):
                                       tip=tr("Км рейсов водителя за сохранённую историю (до 14 дней), не весь пробег")),
                                  wear_cell(t["wear"]),
                                  cell(tx, tint=status_tint(tx), icon="status:" + ti, center=True)]))
+    t = c.get("job_trailer")
+    if t:
+        player = next((d for d in c["drivers"] if d.get("is_player")), None)
+        rows.append((t["unit"], [cell(t["kind"], tip=tr("Прицеп компании-заказчика (быстрая работа), не ваш")), cell(t["plate"]),
+                                 cell(player["name"] if player else "-"), num_cell(t["odometer"]), cell("-", 0, True),
+                                 wear_cell(t["wear"]),
+                                 cell(tr("быстрая работа"), tint=status_tint(tr("в рейсе")),
+                                      icon="status:" + status_spec("trailer_status_on_job", "green"), center=True)]))
     return rows
 
 
@@ -275,7 +299,7 @@ def warnings(c):
     if problem:
         out.append(("drivers", tr("водителей с проблемой: {n}", n=len(problem)), problem))
     worn = [d["id"] for d in drivers if d["truck"] and d["truck"]["wear_max"] >= WEAR_WARN]
-    worn += [t["unit"] for t in c.get("free_trucks", []) if t["wear_max"] >= WEAR_WARN]
+    worn += [t["unit"] for t in c.get("free_trucks", []) + [c.get("job_truck")] if t and t["wear_max"] >= WEAR_WARN]
     if worn:
         out.append(("trucks", tr("грузовиков с износом от {p}%: {n}", p=int(WEAR_WARN), n=len(worn)), worn))
     no_truck = [d["id"] for d in drivers if not d.get("is_player") and not d["truck"]]
