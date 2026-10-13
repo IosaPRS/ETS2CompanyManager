@@ -1,6 +1,7 @@
 """Данные для окна без Qt: строки таблиц, текст карточки водителя, поиск сейва, имена."""
 import html
 import json
+import re
 from pathlib import Path
 
 import ets2_manager as core
@@ -331,6 +332,17 @@ def _mtime(p):
         return 0.0
 
 
+def sii_text(value) -> str:
+    """Строка из сейва: не-ASCII там записан байтами вида \\xd0\\x91 (UTF-8), их нужно собрать обратно."""
+    raw = str(value or "")
+    if "\\x" not in raw:
+        return raw
+    try:
+        return re.sub(rb"\\x([0-9a-fA-F]{2})", lambda m: bytes([int(m[1], 16)]), raw.encode("utf-8")).decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+
+
 def slot_title(slot_dir: Path) -> str:
     """Название слота: поле name из info.sii; если его нет, по имени папки (autosave, quicksave, 1...)."""
     info = slot_dir / "info.sii"
@@ -339,7 +351,7 @@ def slot_title(slot_dir: Path) -> str:
         try:
             sv = core.Save(info)
             unit = sv.one("save_container") or next(iter(sv.units.values()), {})
-            name = str(unit.get("name") or "").strip()
+            name = sii_text(unit.get("name")).strip()
         except (SystemExit, Exception):  # битый или нечитаемый info.sii не мешает выбору
             name = ""
     if name and not name.startswith("@@"):
