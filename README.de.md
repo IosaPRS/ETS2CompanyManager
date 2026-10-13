@@ -4,8 +4,7 @@
 
 Ein Desktop-Programm, mit dem du deine Firma in Euro Truck Simulator 2 im Blick behältst. Es liest den
 Spielstand und zeigt Fahrer, Zugmaschinen, Anhänger, Garagen und Aufträge an einer Stelle. Im Spielstand kann es
-sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern und Fahrerfähigkeiten verbessern.
-- **Hinweiszeile** über den Tabs: Fahrer mit Problem, verschlissene Lkw, Fahrer ohne Lkw, Lkw ohne Fahrer, freie Garagenplätze. Ein Klick zeigt nur diese Zeilen.
+sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern, Fahrer verbessern und leere Garagen mit neuen Fahrern, Zugmaschinen und Anhängern auffüllen.
 
 ## Funktionen
 
@@ -18,6 +17,11 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern und Fahrerf�
   und zerbrechliche Fracht, Just-in-time, ökologisches Fahren und die sechs ADR-Klassen).
 - **Spielstand ändern**: Reparieren (alle oder Auswahl), Betanken, Kennzeichen ändern, kleine Garage auf groß erweitern, Fähigkeiten erhöhen,
   Firmenkontostand und Spielerstufe ändern (Schraubenschlüssel oder Doppelklick auf die Kacheln *Geld* und *Stufe*).
+- **Garagen auffüllen** (Reiter *Garagen*): Fahrer aus der Bewerberliste des Spiels auf freie Plätze einstellen
+  (beste, zufällige oder günstigste), ihnen freie eigene Zugmaschinen oder Kopien deiner Zugmaschinen geben und Anhänger hinzufügen. Einstellen ohne Zugmaschine geht auch.
+- **Hinweiszeile** über den Tabs: Fahrer mit Problem, verschlissene Zugmaschinen, Fahrer ohne Zugmaschine, Zugmaschinen ohne Fahrer, freie Garagenplätze.
+  Ein Klick zeigt nur diese Zeilen.
+- **Schnellaufträge**: Während eines Schnellauftrags erscheinen Zugmaschine und Anhänger des Auftraggebers in den Reitern *Zugmaschinen* und *Anhänger* und lassen sich reparieren und betanken.
 - **Profile**: beliebiges Profil und beliebigen Spielstand-Slot wählen (*Datei → Profil und Spielstand wählen*), auch Steam-Cloud-Profile.
 - Update-Prüfung beim Start (in *Einstellungen* abschaltbar), Oberflächenskalierung, das Fenster öffnet sich dort, wo du es geschlossen hast.
 - Dunkles und helles Design, Oberfläche auf Englisch, Russisch, Deutsch und Französisch, Sortieren und Filtern in jeder Tabelle.
@@ -57,7 +61,8 @@ Details in `locales/README.md`.
 
 ## Bekannte Grenzen
 
-- Stufen werden aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); angestellte Fahrer brauchen pro Stufe doppelt so viel Erfahrung wie der Spieler. An einem Spielstand mit dem Spiel abgeglichen (Spieler 368.497 XP = Stufe 69; bei zwei Fahrern stimmte auch der Erfahrungsbalken). Das Fähigkeitslimit im Reiter „Fähigkeiten“ folgt der Stufe des Fahrers (maximal 36) und lässt sich von Hand ändern.
+- Stufen werden aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); angestellte Fahrer brauchen pro Stufe doppelt so viel Erfahrung wie der Spieler. An einem Spielstand mit dem Spiel abgeglichen (Spieler 368.497 XP = Stufe 69; bei zwei Fahrern stimmte auch der Erfahrungsbalken). Im Reiter „Fähigkeiten“ bekommt ein Fahrer einen Fähigkeitspunkt pro Stufe (maximal 36); für mehr Punkte erhöhst du dort die Stufe.
+- Eingestellte Fahrer stammen aus den Bewerbern, die das Spiel bereits im Spielstand hat; neue Zugmaschinen und Anhänger sind Kopien deiner eigenen, auf neu zurückgesetzt. Im Spiel an einem Spielstand geprüft.
 - ADR-Klassen sind den Bits aufsteigend zugeordnet (1, 2, 3, 4, 6, 8); prüfe eine Änderung im Spiel, bevor du dich darauf verlässt.
 - „Leerfahrt“ wird aus einem Auftrag mit null Frachteinheiten geschätzt.
 - Die Garagenproduktivität wird aus dem Gewinn der letzten 7 Tage und dem Garagenpreis berechnet
@@ -68,4 +73,4 @@ Details in `locales/README.md`.
 
 ## Hinweise
 
-Siehe `NOTICE.md`. Nicht mit SCS Software verbunden.
+Mit Hilfe von KI erstellt (Claude von Anthropic). Siehe `NOTICE.md`. Nicht mit SCS Software verbunden.

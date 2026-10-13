@@ -4,8 +4,7 @@
 
 A desktop tool for managing your in-game company in Euro Truck Simulator 2. It reads your save file and shows
 every driver, truck, trailer, garage and job in one place, and can safely repair, refuel, rename plates,
-upgrade garages and level up driver skills in the save.
-- **Warnings line** above the tabs: drivers with a problem, worn trucks, drivers without a truck, trucks without a driver, empty garage slots. Click an item to see just those rows.
+upgrade garages, level up drivers and fill empty garages with new drivers, trucks and trailers.
 
 ## Features
 
@@ -18,6 +17,11 @@ upgrade garages and level up driver skills in the save.
   fragile cargo, just-in-time, ecodriving and the six ADR classes).
 - **Save editing**: repair (all or selected), refuel, change plates, upgrade a small garage to a large one, raise skills,
   change the company balance and player level (the wrench or a double-click on the *Money* and *Level* tiles).
+- **Fill garages** (*Garages* tab): hire drivers into empty garage slots from the game's own pool of applicants
+  (best, random or cheapest), give them your spare trucks or copies of your trucks, and add trailers. Drivers can also be hired without trucks.
+- **Warnings line** above the tabs: drivers with a problem, worn trucks, drivers without a truck, trucks without a driver, empty garage slots.
+  Click an item to see just those rows.
+- **Quick jobs**: while you drive a quick job, the client's truck and trailer show up on the *Trucks* and *Trailers* tabs and can be repaired and refuelled.
 - **Profiles**: pick any profile and save slot (*File → Choose profile and save*), including Steam Cloud profiles.
 - Update check at startup (can be turned off in *Settings*), interface scale, the window reopens where you left it.
 - Dark and light theme, English / Russian / German / French interface, sorting and filtering in every table.
@@ -57,7 +61,8 @@ See `locales/README.md`.
 
 ## Known limits
 
-- Levels are calculated from XP with the in-game table (levels 0–50, then +6,800 XP per level); hired drivers need twice the player's XP per level. Checked against the game on one save (player 368,497 XP = level 69; two drivers matched including the XP bar). The skill limit on the Skills tab follows the driver's level (maximum 36) and can be changed by hand.
+- Levels are calculated from XP with the in-game table (levels 0–50, then +6,800 XP per level); hired drivers need twice the player's XP per level. Checked against the game on one save (player 368,497 XP = level 69; two drivers matched including the XP bar). On the Skills tab a driver gets one skill point per level (maximum 36); change the level there to get more points.
+- Hired drivers come from the applicants the game already has in the save; new trucks and trailers are copies of ones you own, reset to new. Checked in the game on one save.
 - ADR classes are mapped to bits in ascending order (1, 2, 3, 4, 6, 8); check one change in the game before relying on it.
 - "Empty run" is guessed from a job with zero cargo units.
 - Garage productivity is calculated from the last 7 days of garage profit and the garage price
@@ -68,4 +73,4 @@ See `locales/README.md`.
 
 ## Credits
 
-See `NOTICE.md`. Not affiliated with SCS Software.
+Made with the help of AI (Claude by Anthropic). See `NOTICE.md`. Not affiliated with SCS Software.
