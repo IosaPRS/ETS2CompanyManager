@@ -60,7 +60,7 @@ Details in `locales/README.md`.
 - Die Garagenproduktivität wird aus dem Gewinn der letzten 7 Tage und dem Garagenpreis berechnet
   (150.000 € klein, 300.000 € groß); sie stimmte mit den Werten im Spiel überein.
 - Die Erweiterungskosten gibst du selbst ein: den Preis, den das Spiel anzeigt.
-- Wie das Spiel die Spielerstufe nach einer Änderung der Erfahrung neu berechnet, wurde an einem echten Spielstand noch nicht geprüft.
+- Die Spielerstufe wird aus der Erfahrung nach der Tabelle des Spiels berechnet (Stufen 0–50, danach +6.800 XP pro Stufe); an einem Spielstand stimmte sie mit dem Spiel überein (368.497 XP = Stufe 69).
 - Spielstände von American Truck Simulator lassen sich ebenfalls öffnen, aber Lkw-Namen, Logos und Fahrernamen sind für ETS2 gemacht.
 - Fahrernamen stammen aus der Tabelle `requirements/driver_names.json` (der Spielstand enthält keine); jeden Fahrer kannst du umbenennen.
 

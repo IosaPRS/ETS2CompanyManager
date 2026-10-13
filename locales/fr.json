@@ -273,7 +273,6 @@
  "Рефрижератор": "Frigorifique",
  "Самосвал": "Benne",
  "Сбросить положение окна": "Réinitialiser la position de la fenêtre",
- "Сейчас: {money} € и {xp} XP. Как игра пересчитает уровень после правки опыта, на реальном сейве ещё не проверено; очки навыков программа не начисляет.": "Actuellement : {money} € et {xp} XP. La façon dont le jeu recalcule le niveau après une modification de l'expérience n'a pas encore été vérifiée sur une vraie sauvegarde ; le programme n'ajoute pas de points de compétence.",
  "Силос": "Silo",
  "Скотовоз": "Bétaillère",
  "Слот {n}": "Emplacement {n}",
@@ -288,5 +287,10 @@
  "Цистерна": "Citerne",
  "Штора": "Rideaux coulissants",
  "сохранений: {n}": "sauvegardes : {n}",
- "Изменить баланс и опыт (или двойной клик по плитке)": "Modifier le solde et l'expérience (ou double-clic sur la tuile)"
+ "Изменить баланс и опыт (или двойной клик по плитке)": "Modifier le solde et l'expérience (ou double-clic sur la tuile)",
+ "ур. {n}": "niv. {n}",
+ "Выбор уровня ставит опыт ровно на начало этого уровня.": "Choisir un niveau règle l'expérience exactement au début de ce niveau.",
+ "Уровень игрока:": "Niveau du joueur :",
+ "Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков программа не начисляет.": "Actuellement : {money} € et {xp} XP (niveau {lvl}). Le jeu calcule le niveau à partir de l'expérience ; le programme n'ajoute pas de points de compétence.",
+ "уровень {a} -> {b}": "niveau {a} -> {b}"
 }

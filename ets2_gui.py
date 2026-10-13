@@ -602,7 +602,7 @@ class StatBar(QWidget):
             tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, True))
         tiles += [
             (tr("Штаб"), c["hq"] or "-", False),
-            (tr("Опыт"), core.money(c["xp"]), False),
+            (tr("Опыт"), core.money(c["xp"]) + "  ·  " + tr("ур. {n}", n=view.level_for_xp(c["xp"])), False),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
             (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
@@ -770,12 +770,18 @@ class BalanceDialog(QDialog):
         self.xp.setSingleStep(100)
         # если в сейве значение вне диапазона поля, без правки пользователя оно не должно записаться обрезанным
         self.money0, self.xp0 = self.money.value(), self.xp.value()
+        self.level = QSpinBox()
+        self.level.setRange(0, view.level_for_xp(self.xp.maximum()))
+        self.level.setValue(view.level_for_xp(self.xp.value()))
+        self.level.setToolTip(tr("Выбор уровня ставит опыт ровно на начало этого уровня."))
+        self.level.valueChanged.connect(self._level_changed)
+        self.xp.valueChanged.connect(self._xp_changed)
         form = QFormLayout()
         form.addRow(tr("Баланс компании, €:"), self.money)
         form.addRow(tr("Опыт игрока (XP):"), self.xp)
-        note = QLabel(tr("Сейчас: {money} € и {xp} XP. Как игра пересчитает уровень после правки опыта, на реальном "
-                         "сейве ещё не проверено; очки навыков программа не начисляет.",
-                         money=core.money(money), xp=core.money(xp)))
+        form.addRow(tr("Уровень игрока:"), self.level)
+        note = QLabel(tr("Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков "
+                         "программа не начисляет.", money=core.money(money), xp=core.money(xp), lvl=view.level_for_xp(xp)))
         note.setWordWrap(True)
         note.setStyleSheet(f"color: {theme.c('muted')};")
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -785,6 +791,16 @@ class BalanceDialog(QDialog):
         lay.addLayout(form)
         lay.addWidget(note)
         lay.addWidget(buttons)
+
+    def _level_changed(self, lvl):
+        self.xp.blockSignals(True)
+        self.xp.setValue(view.xp_for_level(lvl))
+        self.xp.blockSignals(False)
+
+    def _xp_changed(self, xp):
+        self.level.blockSignals(True)
+        self.level.setValue(view.level_for_xp(xp))
+        self.level.blockSignals(False)
 
     def changes(self):
         out = {}
@@ -1343,7 +1359,8 @@ class MainWindow(QMainWindow):
             parts.append(tr("Баланс: {a} € -> {b} €", a=core.money(money), b=core.money(ch["money"])))
         if "xp" in ch:
             ops.append(("xp", c["economy_unit"], ch["xp"]))
-            parts.append(tr("Опыт: {a} -> {b}", a=core.money(c["xp"]), b=core.money(ch["xp"])))
+            parts.append(tr("Опыт: {a} -> {b}", a=core.money(c["xp"]), b=core.money(ch["xp"]))
+                         + " (" + tr("уровень {a} -> {b}", a=view.level_for_xp(c["xp"]), b=view.level_for_xp(ch["xp"])) + ")")
         if self._confirm_write(tr("Изменить баланс и опыт?") + "\n" + "\n".join(parts)):
             self._run_ops(ops, tr("Баланс и опыт изменены."))
 

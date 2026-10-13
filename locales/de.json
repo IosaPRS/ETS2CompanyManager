@@ -273,7 +273,6 @@
  "Рефрижератор": "Kühlauflieger",
  "Самосвал": "Kipper",
  "Сбросить положение окна": "Fensterposition zurücksetzen",
- "Сейчас: {money} € и {xp} XP. Как игра пересчитает уровень после правки опыта, на реальном сейве ещё не проверено; очки навыков программа не начисляет.": "Aktuell: {money} € und {xp} XP. Wie das Spiel die Stufe nach einer Änderung der Erfahrung neu berechnet, wurde an einem echten Spielstand noch nicht geprüft; Fertigkeitspunkte vergibt das Programm nicht.",
  "Силос": "Silo",
  "Скотовоз": "Viehtransporter",
  "Слот {n}": "Slot {n}",
@@ -288,5 +287,10 @@
  "Цистерна": "Tank",
  "Штора": "Planenauflieger",
  "сохранений: {n}": "Spielstände: {n}",
- "Изменить баланс и опыт (или двойной клик по плитке)": "Kontostand und Erfahrung ändern (oder Doppelklick auf die Kachel)"
+ "Изменить баланс и опыт (или двойной клик по плитке)": "Kontostand und Erfahrung ändern (oder Doppelklick auf die Kachel)",
+ "ур. {n}": "St. {n}",
+ "Выбор уровня ставит опыт ровно на начало этого уровня.": "Die Wahl einer Stufe setzt die Erfahrung genau auf den Beginn dieser Stufe.",
+ "Уровень игрока:": "Spielerstufe:",
+ "Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков программа не начисляет.": "Aktuell: {money} € und {xp} XP (Stufe {lvl}). Das Spiel berechnet die Stufe aus der Erfahrung; Fertigkeitspunkte vergibt das Programm nicht.",
+ "уровень {a} -> {b}": "Stufe {a} -> {b}"
 }

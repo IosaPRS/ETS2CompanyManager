@@ -60,7 +60,7 @@ See `locales/README.md`.
 - Garage productivity is calculated from the last 7 days of garage profit and the garage price
   (€150,000 small, €300,000 large); it matched the values seen in the game.
 - The upgrade cost is entered by hand: type the price the game shows.
-- How the game recalculates the player level after an XP change has not been checked on a real save yet.
+- The player level is calculated from XP with the in-game table (levels 0–50, then +6,800 XP per level); it matched the level shown in the game on one save (368,497 XP = level 69).
 - American Truck Simulator saves open too, but truck names, logos and driver names are made for ETS2.
 - Driver names come from a table in `requirements/driver_names.json` (the save has none); you can rename any driver.
 

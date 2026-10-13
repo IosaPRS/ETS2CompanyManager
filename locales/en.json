@@ -273,7 +273,6 @@
  "Рефрижератор": "Refrigerated",
  "Самосвал": "Dumper",
  "Сбросить положение окна": "Reset window position",
- "Сейчас: {money} € и {xp} XP. Как игра пересчитает уровень после правки опыта, на реальном сейве ещё не проверено; очки навыков программа не начисляет.": "Now: €{money} and {xp} XP. How the game recalculates the level after an XP change has not been checked on a real save yet; the program does not add skill points.",
  "Силос": "Silo",
  "Скотовоз": "Livestock",
  "Слот {n}": "Slot {n}",
@@ -288,5 +287,10 @@
  "Цистерна": "Tanker",
  "Штора": "Curtainsider",
  "сохранений: {n}": "saves: {n}",
- "Изменить баланс и опыт (или двойной клик по плитке)": "Change balance and XP (or double-click the tile)"
+ "Изменить баланс и опыт (или двойной клик по плитке)": "Change balance and XP (or double-click the tile)",
+ "ур. {n}": "lvl {n}",
+ "Выбор уровня ставит опыт ровно на начало этого уровня.": "Choosing a level sets XP to the exact start of that level.",
+ "Уровень игрока:": "Player level:",
+ "Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков программа не начисляет.": "Now: €{money} and {xp} XP (level {lvl}). The game derives the level from XP; the program does not add skill points.",
+ "уровень {a} -> {b}": "level {a} -> {b}"
 }
