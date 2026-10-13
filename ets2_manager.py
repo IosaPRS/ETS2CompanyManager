@@ -396,6 +396,7 @@ def build_company(sv: Save) -> dict:
     eco, pl = sv.one("economy") or {}, sv.one("player") or {}
     bank = sv.ref(eco.get("bank")) or {}
     nick = load_nicknames()
+    own = _read_names(custom_names_path())  # имена, которые пользователь задал сам
     now = to_int(eco.get("game_time"))
 
     # водитель -> домашний гараж
@@ -435,7 +436,9 @@ def build_company(sv: Save) -> dict:
         trailer_ref = player_trailer if is_player else d.get("assigned_trailer")
         drivers.append({
             "id": did,
-            "name": nick.get(did) or ((sv.profile_name or tr("Я (игрок)")) if is_player else tr("Водитель №{n}", n=did.rpartition('.')[2])),
+            # игрок: имя профиля (общий список имён к нему не относится, иначе игрок получает имя чужого водителя)
+            "name": ((own.get(did) or sv.profile_name or tr("Я (игрок)")) if is_player
+                     else nick.get(did) or tr("Водитель №{n}", n=did.rpartition('.')[2])),
             "is_player": is_player,
             "hometown": ((pl.get("hq_city") if is_player else d.get("hometown")) or "").capitalize(),
             "city": (d.get("current_city") or (pl.get("hq_city") if is_player else "") or "").capitalize(),
