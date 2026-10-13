@@ -10,7 +10,7 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern, Fahrer verb
 
 - **Fahrer**: Stadt, Heimatgarage, XP, Fähigkeiten, Zugmaschine, Anhänger, Status, aktuelle Route, Gewinn und €/Tag.
   Die Status nutzen die Farben des Spiels: im Auftrag, Leerfahrt, geparkt, untätig, defekt, ohne Zugmaschine.
-- **Zugmaschinen und Anhänger**: Kilometerstand, Kraftstoff, Verschleiß je Bauteil, dauerhafter Verschleiß, Status.
+- **Zugmaschinen und Anhänger**: Kilometerstand, Kraftstoff, Verschleiß, Status.
 - **Garagen**: Typ, Plätze, Fahrer, Anhänger, Einkommen pro Tag und Produktivität.
 - **Aufträge**: wer was wohin fährt, Entfernung, Fahrtzeit, Fährkosten.
 - **Reiter „Fähigkeiten“**: Für jeden Fahrer wählst du wie im Spiel, was verbessert wird (Ferntransport, wertvolle
@@ -21,10 +21,6 @@ sicher reparieren, betanken, Kennzeichen ändern, Garagen erweitern, Fahrer verb
   (beste, zufällige oder günstigste), ihnen freie eigene Zugmaschinen oder Kopien deiner Zugmaschinen geben und Anhänger hinzufügen. Einstellen ohne Zugmaschine geht auch.
 - **Hinweiszeile** über den Tabs: Fahrer mit Problem, verschlissene Zugmaschinen, Fahrer ohne Zugmaschine, Zugmaschinen ohne Fahrer, freie Garagenplätze.
   Ein Klick zeigt nur diese Zeilen.
-- **Schnellaufträge**: Während eines Schnellauftrags erscheinen Zugmaschine und Anhänger des Auftraggebers in den Reitern *Zugmaschinen* und *Anhänger* und lassen sich reparieren und betanken.
-- **Profile**: beliebiges Profil und beliebigen Spielstand-Slot wählen (*Datei → Profil und Spielstand wählen*), auch Steam-Cloud-Profile.
-- Update-Prüfung beim Start (in *Einstellungen* abschaltbar), Oberflächenskalierung, das Fenster öffnet sich dort, wo du es geschlossen hast.
-- Dunkles und helles Design, Oberfläche auf Englisch, Russisch, Deutsch und Französisch, Sortieren und Filtern in jeder Tabelle.
 - Beobachtet den Spielstand: Schreibt das Spiel einen neuen Autosave, aktualisieren sich die Tabellen von selbst.
 
 ## Installation
@@ -73,4 +69,4 @@ Details in `locales/README.md`.
 
 ## Hinweise
 
-Mit Hilfe von KI erstellt (Claude von Anthropic). Siehe `NOTICE.md`. Nicht mit SCS Software verbunden.
+Siehe `NOTICE.md`. Nicht mit SCS Software verbunden.

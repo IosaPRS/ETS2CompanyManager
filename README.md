@@ -10,7 +10,7 @@ upgrade garages, level up drivers and fill empty garages with new drivers, truck
 
 - **Drivers**: city, home garage, XP, skills, truck, trailer, status, current route, profit and €/day.
   Statuses use the in-game colours: on a job, empty run, parked, idle, broken, no truck.
-- **Trucks and trailers**: odometer, fuel, wear per part, permanent wear, status.
+- **Trucks and trailers**: odometer, fuel, wear, status.
 - **Garages**: type, slots, drivers, trailers, income per day and productivity.
 - **Jobs**: who is hauling what, from where to where, distance, time on the road, ferry cost.
 - **Skills tab**: pick what to level up for every driver, like in the game (long distance, high value cargo,
@@ -21,10 +21,6 @@ upgrade garages, level up drivers and fill empty garages with new drivers, truck
   (best, random or cheapest), give them your spare trucks or copies of your trucks, and add trailers. Drivers can also be hired without trucks.
 - **Warnings line** above the tabs: drivers with a problem, worn trucks, drivers without a truck, trucks without a driver, empty garage slots.
   Click an item to see just those rows.
-- **Quick jobs**: while you drive a quick job, the client's truck and trailer show up on the *Trucks* and *Trailers* tabs and can be repaired and refuelled.
-- **Profiles**: pick any profile and save slot (*File → Choose profile and save*), including Steam Cloud profiles.
-- Update check at startup (can be turned off in *Settings*), interface scale, the window reopens where you left it.
-- Dark and light theme, English / Russian / German / French interface, sorting and filtering in every table.
 - Follows the save: when the game writes a new autosave the tables refresh by themselves.
 
 ## Install
@@ -73,4 +69,4 @@ See `locales/README.md`.
 
 ## Credits
 
-Made with the help of AI (Claude by Anthropic). See `NOTICE.md`. Not affiliated with SCS Software.
+See `NOTICE.md`. Not affiliated with SCS Software.
