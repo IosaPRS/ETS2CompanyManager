@@ -1267,6 +1267,9 @@ class MainWindow(QMainWindow):
         self.update_action = self._action(smenu, tr("Проверять обновления при запуске"), lambda: None, checkable=True)
         self.update_action.setChecked(self.settings.value("check_updates", True, type=bool))
         self.update_action.toggled.connect(lambda on: self.settings.setValue("check_updates", on))
+        self.copy_action = self._action(smenu, tr("Сохранять правки в копию сейва («… Edited»)"), lambda: None, checkable=True)
+        self.copy_action.setChecked(self.settings.value("edit_copy", True, type=bool))
+        self.copy_action.toggled.connect(lambda on: self.settings.setValue("edit_copy", on))
         scale_menu = smenu.addMenu(tr("Масштаб интерфейса"))
         group = QActionGroup(self)
         cur_scale = self.settings.value("ui_scale", 100, type=int)
@@ -1593,33 +1596,58 @@ class MainWindow(QMainWindow):
             return ("trailer", t["unit"], t) if t else None
         return None
 
+    def _edit_target(self):
+        """Куда пойдёт правка: (имя нового слота-копии или None, править ли при запущенной игре)."""
+        if not self.settings.value("edit_copy", True, type=bool):
+            return None, False
+        title = view.slot_title(Path(self.save_path).parent)
+        if title.endswith(edit.EDITED_SUFFIX):  # уже копия программы: правим её же, оригинал и так цел
+            return None, True
+        return title + edit.EDITED_SUFFIX, True
+
     def _confirm_write(self, text):
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
         box.setWindowTitle(tr("Изменение сейва"))
-        box.setText(text + tr("\n\nИгра должна быть закрыта. Перед записью программа сделает копию сейва в папке "
-                              "ets2cm_backups рядом с game.sii. Лучше сначала проверить на копии слота сохранения."))
+        copy_name, in_copy = self._edit_target()
+        if copy_name:
+            note = tr("\n\nПравка запишется в новый слот «{name}», текущий сейв не изменится. Игру закрывать не нужно: "
+                      "после правки загрузите этот слот в игре.", name=copy_name)
+        elif in_copy:
+            note = tr("\n\nПравка запишется в этот же слот-копию (копия до правки будет в ets2cm_backups). "
+                      "Если он сейчас загружен в игре, после правки загрузите его заново.")
+        else:
+            note = tr("\n\nИгра должна быть закрыта. Перед записью программа сделает копию сейва в папке "
+                      "ets2cm_backups рядом с game.sii. Лучше сначала проверить на копии слота сохранения.")
+        box.setText(text + note)
         box.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         return box.exec() == QMessageBox.StandardButton.Ok
 
     def _run_ops(self, ops, done_text):
+        copy_name, allow_running = self._edit_target()
         try:
-            report = edit.apply_ops(self.save_path, ops, expected_mtime=self.mtime)
+            report = edit.apply_ops(self.save_path, ops, expected_mtime=self.mtime, copy_name=copy_name,
+                                    allow_running=allow_running)
         except edit.EditError as exc:
             QMessageBox.warning(self, tr("Сейв не изменён"), str(exc))
             return
         except Exception as exc:
             QMessageBox.critical(self, tr("Ошибка записи"), f"{type(exc).__name__}: {exc}\n" + tr("Сейв не изменён."))
             return
-        self.load(self.save_path)
-        if report["backup"]:
-            note = ""
-            if report.get("info_error"):
-                note = "\n" + tr("info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}", err=report["info_error"])
-            QMessageBox.information(self, tr("Готово"), done_text + "\n" + tr("Изменено полей: {n}.", n=report['changed_fields']) + "\n"
-                                    + tr("Копия до правки: {path}", path=report['backup']) + note)
-        else:
+        self.load(report["path"])
+        if not report["changed_fields"]:
             QMessageBox.information(self, tr("Без изменений"), tr("Менять было нечего: значения уже такие."))
+            return
+        note = ""
+        if report.get("info_error"):
+            note = "\n" + tr("info.sii (опыт и деньги в списке сохранений игры) не обновлён: {err}", err=report["info_error"])
+        if report.get("copy"):
+            where = tr("Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. "
+                       "В игре: Загрузить игру → этот слот.", name=copy_name, folder=report["path"].parent.name)
+        else:
+            where = tr("Копия до правки: {path}", path=report['backup'])
+        QMessageBox.information(self, tr("Готово"), done_text + "\n" + tr("Изменено полей: {n}.", n=report['changed_fields'])
+                                + "\n" + where + note)
 
     def _need_save(self):
         if not self.save_path:

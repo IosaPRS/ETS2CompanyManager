@@ -361,5 +361,10 @@
  "водителей с проблемой: {n}": "chauffeurs en difficulté : {n}",
  "грузовиков без водителя: {n}": "camions sans chauffeur : {n}",
  "грузовиков с износом от {p}%: {n}": "camions usés à {p}% ou plus : {n}",
- "пустых мест для водителей: {n}": "places de chauffeur libres : {n}"
+ "пустых мест для водителей: {n}": "places de chauffeur libres : {n}",
+ "\n\nПравка запишется в новый слот «{name}», текущий сейв не изменится. Игру закрывать не нужно: после правки загрузите этот слот в игре.": "\n\nLa modification sera écrite dans un nouvel emplacement « {name} », la sauvegarde actuelle reste intacte. Inutile de fermer le jeu : chargez ensuite cet emplacement dans le jeu.",
+ "\n\nПравка запишется в этот же слот-копию (копия до правки будет в ets2cm_backups). Если он сейчас загружен в игре, после правки загрузите его заново.": "\n\nLa modification sera écrite dans cet emplacement-copie (une sauvegarde va dans ets2cm_backups). S’il est chargé dans le jeu, rechargez-le ensuite.",
+ "В info.sii нет описания сохранения.": "info.sii ne contient pas de description de sauvegarde.",
+ "Сохранено в новый слот «{name}» (папка {folder}). Исходный сейв не изменён. В игре: Загрузить игру → этот слот.": "Enregistré dans un nouvel emplacement « {name} » (dossier {folder}). La sauvegarde d’origine est inchangée. Dans le jeu : Charger une partie → cet emplacement.",
+ "Сохранять правки в копию сейва («… Edited»)": "Enregistrer les modifications dans une copie (« … Edited »)"
 }

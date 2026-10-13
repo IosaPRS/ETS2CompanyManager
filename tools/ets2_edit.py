@@ -316,6 +316,58 @@ def undo_last(path: Path):
     return last
 
 
+EDITED_SUFFIX = " Edited"
+
+
+def sii_quote(text: str) -> str:
+    """Строка для значения SII в кавычках: не-ASCII как \\xNN по байтам UTF-8 (как пишет игра), кавычки и \\ убираются."""
+    out = []
+    for ch in text:
+        if ch in '"\\':
+            continue
+        if 32 <= ord(ch) < 127:
+            out.append(ch)
+        else:
+            out.extend(f"\\x{b:02x}" for b in ch.encode("utf-8"))
+    return '"' + "".join(out) + '"'
+
+
+def make_edited_copy(path: Path, name: str, game_time=None) -> Path:
+    """Копирует слот сохранения с game.sii в новую папку-слот (следующий свободный номер) и даёт ему имя name.
+    Исходный слот не трогается. Возвращает путь к game.sii копии."""
+    src = Path(path).parent
+    root = src.parent
+    nums = [int(p.name) for p in root.iterdir() if p.is_dir() and p.name.isdigit()]
+    dst = root / str(max(nums, default=0) + 1)
+    try:
+        dst.mkdir()
+        for f in src.iterdir():
+            if f.is_file() and not f.name.endswith(".ets2cm.tmp"):
+                shutil.copy2(f, dst / f.name)
+        info_path = dst / "info.sii"
+        donor = not info_path.exists()
+        if donor:  # у части автосохранений info.sii нет: берём из соседнего слота
+            donors = sorted((p / "info.sii" for p in root.iterdir() if (p / "info.sii").is_file()),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+            if donors:
+                shutil.copy2(donors[0], info_path)
+        if info_path.exists():
+            text = read_text(info_path)
+            lines = text.split("\n")
+            unit = (parse_text(text).one("save_container") or {}).get("_name")
+            if not unit:
+                raise EditError(tr("В info.sii нет описания сохранения."))
+            set_field(lines, unit, "name", sii_quote(name))
+            set_field(lines, unit, "file_time", str(int(time.time())))
+            if donor and game_time is not None and re.fullmatch(r"\d+", str(game_time)):
+                set_field(lines, unit, "time", str(game_time))
+            _atomic_write(info_path, "\n".join(lines))
+    except Exception:
+        shutil.rmtree(dst, ignore_errors=True)
+        raise
+    return dst / Path(path).name
+
+
 def _atomic_write(path: Path, text: str):
     tmp = path.with_name(path.name + ".ets2cm.tmp")
     try:
@@ -358,16 +410,19 @@ def sync_info(path: Path, sv: "core.Save", stamp: str):
     diffs = _diff_units(parse_text(text), parse_text(new_text))
     if {d[1] for d in diffs} != set(changes) or {d[0] for d in diffs} != {unit}:
         raise EditError(tr("Сверка info.sii не прошла, он не изменён."))
-    backup(info_path, stamp)
+    if stamp:  # без stamp (свежая копия слота) копия до правки не нужна
+        backup(info_path, stamp)
     _atomic_write(info_path, new_text)
     return len(changes)
 
 
-def apply_ops(path, ops, expected_mtime=None):
+def apply_ops(path, ops, expected_mtime=None, copy_name=None, allow_running=False):
     """ops: [('repair', unit, full), ('plate', unit, 'ABC 123'), ('skills', unit, {'long_dist': 3}),
-    ('money', bank_unit, 100000), ('xp', economy_unit, 50000), ...]. Возвращает отчёт."""
+    ('money', bank_unit, 100000), ('xp', economy_unit, 50000), ...]. Возвращает отчёт.
+    copy_name: записать результат не в этот слот, а в новый слот-копию с таким именем (исходный не меняется,
+    игру можно не закрывать). allow_running: править этот слот при запущенной игре (слот-копия программы)."""
     path = Path(path)
-    if game_running():
+    if copy_name is None and not allow_running and game_running():
         raise EditError(tr("Игра запущена. Закройте Euro Truck Simulator 2 (или American Truck Simulator) и повторите: "
                            "пока игра открыта, она перезапишет изменения."))
     if expected_mtime is not None and path.stat().st_mtime != expected_mtime:
@@ -422,7 +477,18 @@ def apply_ops(path, ops, expected_mtime=None):
     if stray:
         raise EditError(tr("Сверка не прошла: изменилось лишнее ({what}), запись отменена.", what=stray[0]))
     if not diffs:
-        return {"changed_fields": 0, "units": 0, "backup": None, "info": 0, "info_error": None}
+        return {"changed_fields": 0, "units": 0, "backup": None, "info": 0, "info_error": None, "path": path}
+
+    if copy_name is not None:  # новый слот: исходный сейв остаётся как был, копия до правки не нужна
+        path = make_edited_copy(path, copy_name, (original.one("economy") or {}).get("game_time"))
+        _atomic_write(path, new_text)
+        report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": None,
+                  "info": 0, "info_error": None, "path": path, "copy": True}
+        try:
+            report["info"] = sync_info(path, result, None)
+        except (EditError, OSError) as exc:
+            report["info_error"] = str(exc)
+        return report
 
     stamp = time.strftime('%Y%m%d_%H%M%S')
     while (path.parent / BACKUP_DIR / f"{path.stem}_{stamp}{path.suffix}").exists():  # две правки в одну секунду
@@ -430,7 +496,8 @@ def apply_ops(path, ops, expected_mtime=None):
         stamp = time.strftime('%Y%m%d_%H%M%S')
     bak = backup(path, stamp)
     _atomic_write(path, new_text)
-    report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak, "info": 0, "info_error": None}
+    report = {"changed_fields": len(diffs), "units": len({d[0] for d in diffs}), "backup": bak, "info": 0, "info_error": None,
+              "path": path}
     try:  # info.sii только для списка сохранений в игре: его ошибка не отменяет уже сделанную правку
         report["info"] = sync_info(path, result, stamp)
     except (EditError, OSError) as exc:
