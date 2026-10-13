@@ -156,7 +156,7 @@ def driver_rows(c):
         st_text, st_icon = driver_status(d)
         cells = [
             name, cell(d["city"]), cell(d["garage"] or "-"),
-            num_cell(d["xp"]),
+            cell("-", -1, center=True) if d["is_player"] else num_cell(d["xp"]),  # у профиля показываем только уровень
             c_num(d["level"]),
             c_num(d["adr_classes"], skill_tint(d["adr_classes"])),
         ]
@@ -276,8 +276,10 @@ def safe_money(v):
 
 
 def level_text(d):
-    """'Уровень 7: 2 666 / 3 200 XP' — как полоска уровня в игре."""
-    lvl, have, need = level_progress(d["xp"], d["is_player"])
+    """Водитель: 'Уровень 7: 2 666 / 3 200 XP' (как полоска в игре); профиль игрока: только 'Уровень 69'."""
+    if d["is_player"]:
+        return tr("<b>Уровень {lvl}</b>", lvl=d["level"])
+    lvl, have, need = level_progress(d["xp"])
     return tr("<b>Уровень {lvl}:</b> {have} / {need} XP", lvl=lvl, have=core.money(have), need=core.money(need))
 
 
@@ -286,8 +288,8 @@ def driver_card_html(d):
     s, st, t, trl, j = d["skills"], d["stats"], d["truck"], d["trailer"], d["job"]
     lines = [
         f"<h3>{e(d['name'])} <small>({e(d['id'])})</small></h3>",
-        tr("<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage} &nbsp; <b>XP:</b> {xp}",
-           home=e(d['hometown']), city=e(d['city']), garage=e(d['garage'] or '-'), xp=core.money(d['xp'])),
+        tr("<b>Родина:</b> {home} &nbsp; <b>Сейчас:</b> {city} &nbsp; <b>Гараж:</b> {garage}",
+           home=e(d['hometown']), city=e(d['city']), garage=e(d['garage'] or '-')),
         level_text(d),
         tr("<b>Навыки:</b> ADR {adr}/6, дальние {ld}, тяжёлые {hv}, хрупкие {fr}, срочные {ur}, эко {me}",
            adr=d['adr_classes'], ld=s['long_dist'], hv=s['heavy'], fr=s['fragile'], ur=s['urgent'], me=s['mechanical']),

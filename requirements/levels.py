@@ -47,4 +47,3 @@ def level_progress(xp: int, is_player=False):
     lvl = level_for_xp(int(xp) // k)
     start = xp_for_level(lvl) * k
     return lvl, int(xp) - start, xp_for_level(lvl + 1) * k - start
-

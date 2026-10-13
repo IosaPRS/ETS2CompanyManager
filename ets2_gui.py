@@ -574,7 +574,7 @@ class StatBar(QWidget):
         val.setObjectName("tileValue")
         val.setProperty("accent", "true" if accent else "false")
         if editable:
-            tip = tr("Изменить баланс и опыт (или двойной клик по плитке)")
+            tip = tr("Изменить баланс и уровень (или двойной клик по плитке)")
             tile.setToolTip(tip)
             tile.setCursor(Qt.CursorShape.PointingHandCursor)
             tile.doubleClicked.connect(self.editMoney.emit)
@@ -607,7 +607,7 @@ class StatBar(QWidget):
             tiles.append((tr("Деньги"), view.safe_money(c["money"]), True, True))
         tiles += [
             (tr("Штаб"), c["hq"] or "-", False),
-            (tr("Опыт"), core.money(c["xp"]) + "  ·  " + tr("ур. {n}", n=levels.level_for_xp(c["xp"])), False),
+            (tr("Уровень"), str(levels.level_for_xp(c["xp"])), False),
             (tr("Водители"), f"{len(c['drivers'])}  ·  " + tr("в рейсе {n}", n=busy), False),
             (tr("Траки"), str(sum(1 for d in c["drivers"] if d["truck"])), False),
             (tr("Прицепы"), str(len(c["trailers"])), False),
@@ -764,29 +764,25 @@ def big_spin(lo, hi, value):
 
 
 class BalanceDialog(QDialog):
-    """Правка баланса компании и опыта игрока."""
+    """Правка баланса компании и уровня игрока (уровень записывается как опыт на начало этого уровня)."""
+    LEVEL_MAX = 500
 
     def __init__(self, parent, money, xp):
         super().__init__(parent)
-        self.setWindowTitle(tr("Баланс и опыт"))
-        self.money0, self.xp0 = money, xp
+        self.setWindowTitle(tr("Баланс и уровень"))
         self.money = big_spin(edit.MONEY_MIN, edit.MONEY_MAX, money)
-        self.xp = big_spin(0, 2_147_483_647, xp)  # QSpinBox не умеет больше 2^31-1
-        self.xp.setSingleStep(100)
         # если в сейве значение вне диапазона поля, без правки пользователя оно не должно записаться обрезанным
-        self.money0, self.xp0 = self.money.value(), self.xp.value()
+        self.money0 = self.money.value()
+        self.level0 = levels.level_for_xp(xp)
         self.level = QSpinBox()
-        self.level.setRange(0, levels.level_for_xp(self.xp.maximum()))
-        self.level.setValue(levels.level_for_xp(self.xp.value()))
-        self.level.setToolTip(tr("Выбор уровня ставит опыт ровно на начало этого уровня."))
-        self.level.valueChanged.connect(self._level_changed)
-        self.xp.valueChanged.connect(self._xp_changed)
+        self.level.setRange(0, max(self.LEVEL_MAX, self.level0))
+        self.level.setValue(self.level0)
+        self.level.setToolTip(tr("Новый уровень записывается в сейв как опыт ровно на начало этого уровня."))
         form = QFormLayout()
         form.addRow(tr("Баланс компании, €:"), self.money)
-        form.addRow(tr("Опыт игрока (XP):"), self.xp)
         form.addRow(tr("Уровень игрока:"), self.level)
-        note = QLabel(tr("Сейчас: {money} € и {xp} XP (уровень {lvl}). Уровень игра считает из опыта; очки навыков "
-                         "программа не начисляет.", money=core.money(money), xp=core.money(xp), lvl=levels.level_for_xp(xp)))
+        note = QLabel(tr("Сейчас: {money} €, уровень {lvl}. Очки навыков программа не начисляет.",
+                         money=core.money(money), lvl=self.level0))
         note.setWordWrap(True)
         note.setStyleSheet(f"color: {theme.c('muted')};")
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -797,22 +793,12 @@ class BalanceDialog(QDialog):
         lay.addWidget(note)
         lay.addWidget(buttons)
 
-    def _level_changed(self, lvl):
-        self.xp.blockSignals(True)
-        self.xp.setValue(levels.xp_for_level(lvl))
-        self.xp.blockSignals(False)
-
-    def _xp_changed(self, xp):
-        self.level.blockSignals(True)
-        self.level.setValue(levels.level_for_xp(xp))
-        self.level.blockSignals(False)
-
     def changes(self):
         out = {}
         if self.money.value() != self.money0:
             out["money"] = self.money.value()
-        if self.xp.value() != self.xp0:
-            out["xp"] = self.xp.value()
+        if self.level.value() != self.level0:
+            out["xp"] = levels.xp_for_level(self.level.value())
         return out
 
 
@@ -918,7 +904,7 @@ class MainWindow(QMainWindow):
         self._action(menu, tr("Выход"), self.close, "Ctrl+Q")
 
         emenu = self.menuBar().addMenu(tr("Правка"))
-        self._action(emenu, tr("Баланс и опыт…"), self.edit_balance)
+        self._action(emenu, tr("Баланс и уровень…"), self.edit_balance)
 
         lmenu = self.menuBar().addMenu("Язык / Language")
         for code, name in available_langs().items():
@@ -1353,7 +1339,7 @@ class MainWindow(QMainWindow):
             return
         c = self.company
         if c.get("money") is None or not c.get("bank_unit") or not c.get("economy_unit"):
-            QMessageBox.information(self, tr("Баланс и опыт"), tr("Не нашёл в сейве счёт компании или опыт игрока."))
+            QMessageBox.information(self, tr("Баланс и уровень"), tr("Не нашёл в сейве счёт компании или опыт игрока."))
             return
         money = core.to_int(c["money"])
         dlg = BalanceDialog(self, money, c["xp"])
@@ -1368,10 +1354,9 @@ class MainWindow(QMainWindow):
             parts.append(tr("Баланс: {a} € -> {b} €", a=core.money(money), b=core.money(ch["money"])))
         if "xp" in ch:
             ops.append(("xp", c["economy_unit"], ch["xp"]))
-            parts.append(tr("Опыт: {a} -> {b}", a=core.money(c["xp"]), b=core.money(ch["xp"]))
-                         + " (" + tr("уровень {a} -> {b}", a=levels.level_for_xp(c["xp"]), b=levels.level_for_xp(ch["xp"])) + ")")
-        if self._confirm_write(tr("Изменить баланс и опыт?") + "\n" + "\n".join(parts)):
-            self._run_ops(ops, tr("Баланс и опыт изменены."))
+            parts.append(tr("Уровень: {a} -> {b}", a=levels.level_for_xp(c["xp"]), b=levels.level_for_xp(ch["xp"])))
+        if self._confirm_write(tr("Изменить баланс и уровень?") + "\n" + "\n".join(parts)):
+            self._run_ops(ops, tr("Баланс и уровень изменены."))
 
     def change_plate(self):
         if not self._need_save():
