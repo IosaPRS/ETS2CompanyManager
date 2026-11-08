@@ -224,6 +224,12 @@ def set_int_field(lines, unit_id, key, value: int, lo: int, hi: int, what: str):
 
 # ---------- сверка и запись ----------
 
+def _only_array_keys_differ(ua: dict, ub: dict) -> bool:
+    """У юнита, массивы которого мы правим, набор полей может измениться только за счёт массивов:
+    пустой массив стал непустым (появились key[]) или последний элемент убрали (key[] пропали, остался счётчик)."""
+    return all(k.endswith("[]") for k in ua.keys() ^ ub.keys())
+
+
 def _diff_units(a: "core.Save", b: "core.Save", new_units=frozenset(), reshaped=frozenset()):
     """Список (unit, field) с отличиями между двумя разобранными сейвами; структурные отличия -> EditError.
     new_units: юниты, которые должны появиться; reshaped: юниты, у которых могут появиться поля (пустой массив стал непустым)."""
@@ -232,7 +238,7 @@ def _diff_units(a: "core.Save", b: "core.Save", new_units=frozenset(), reshaped=
     diffs = [(n, "*") for n in new_units]
     for name, ua in a.units.items():
         ub = b.units[name]
-        if ua.keys() != ub.keys() and not (name in reshaped and ua.keys() <= ub.keys()):
+        if ua.keys() != ub.keys() and not (name in reshaped and _only_array_keys_differ(ua, ub)):
             raise EditError(tr("Сверка не прошла: у юнита {name} изменился набор полей.", name=name))
         for k, v in ub.items():
             if v != ua.get(k):
